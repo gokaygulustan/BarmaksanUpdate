@@ -624,11 +624,6 @@ html[data-editing] [data-edit-key] {
       var(--background);
   }
 }
-/* Pano ekranları (Birim tedarik talepleri, Taleplerim): doku ve altın ışık kutuların İÇİNDE; kutuların
- * arkası boş, düz zemin. (Öznitelik seçici sınıftan güçlü: mobil kural da ezilir.) */
-.page-surface[data-plain] {
-  background: var(--background);
-}
 
 /* Kenar çubuğu dokusu: gizlilik şeridindeki altın değirmen ikonları (değirmen, başak, un, valsli,
  * taş, silo); üstte belirgin, aşağı doğru söner ve çok yavaş kayar. */

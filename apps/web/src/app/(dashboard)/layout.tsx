@@ -1084,7 +1084,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sayfa paneli */}
         <main
           data-edit-scope
-          data-plain={pathname === '/internal-requests' || pathname === '/taleplerim' ? '' : undefined}
           className={cn(
             'shell-panel-in page-surface relative flex-1 overflow-y-auto overflow-x-hidden',
             isDepartment ? 'sm:mx-2 sm:rounded-t-[20px]' : 'md:rounded-tl-[20px]',

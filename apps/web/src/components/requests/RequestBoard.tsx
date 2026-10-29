@@ -105,10 +105,10 @@ function RequestCard({
   return (
     <Link
       href={href}
-      className="skel-in texture-host group/card relative block overflow-hidden rounded-[16px] border border-white/[0.08] bg-card px-4 py-3.5 outline-none transition-[border-color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-brand/40 focus-visible:border-brand/60 active:translate-y-0 active:duration-100"
+      className="skel-in texture-host gold-fade group/card relative block overflow-hidden rounded-[16px] border border-white/[0.08] bg-card px-4 py-3.5 outline-none transition-colors duration-300 hover:border-white/[0.14] focus-visible:border-brand/60"
     >
-      {/* Kartın içinde marka dokusu (üstte belirgin, aşağı doğru söner); degrade yok. Kartların arkası
-          (sayfa zemini) boş kalır. İmleç kartın üstündeyken doku yavaşça kayar. */}
+      {/* Kartın içinde marka dokusu (üstte belirgin, aşağı doğru söner). Hover'da kenar altınla çizilmez,
+          kart kalkmaz: alttan sarı degrade yükselir, soldaki altın çizgi açılır, doku yavaşça kayar. */}
       <span aria-hidden className="tile-texture tile-texture-down" />
       {/* Soldan altın çizgi: üzerine gelince ortadan açılır. */}
       <span
