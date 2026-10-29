@@ -778,6 +778,13 @@ html[data-editing] [data-edit-key] {
   animation-play-state: paused;
   will-change: translate;
 }
+/* Aşağıya doğru söner: üstte belirgin, kutunun ortasında yok olur (sütun / liste kutuları). */
+.tile-texture.tile-texture-down {
+  height: 340px;
+  opacity: 0.2;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.45) 48%, transparent 100%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.45) 48%, transparent 100%);
+}
 .tile-texture-bottom {
   inset: auto 0 0 -330px;
   height: 220px;

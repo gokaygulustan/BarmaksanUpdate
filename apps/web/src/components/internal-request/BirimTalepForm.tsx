@@ -28,6 +28,8 @@ import { isImageFile } from '@/lib/richHtml';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { cn } from '@/lib/utils';
 import {
+  ChevronDown,
+  ChevronLeft,
   Download,
   FileSpreadsheet,
   ImagePlus,
@@ -40,6 +42,44 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+
+/** Form dili: bölüm kartı, etiket ve alan (dashboard / liste ekranlarıyla aynı). */
+const sectionClass = 'space-y-5 rounded-[22px] border border-white/[0.07] bg-card p-5 sm:p-6';
+const labelClass = 'text-[12.5px] font-medium text-white/55';
+const inputClass =
+  'h-11 rounded-[12px] border border-white/[0.08] bg-white/[0.03] px-3 text-[14px] text-white outline-none transition-[border-color,background-color,box-shadow] duration-200 placeholder:text-white/30 hover:border-brand/50 focus-visible:border-brand/70 focus-visible:bg-white/[0.05] focus-visible:ring-4 focus-visible:ring-brand/15';
+
+/** Küçük, sakin ikincil düğme (Şablon indir, Excel yükle): üzerine gelince altın dolar. */
+const ghostBtn =
+  'press inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-white/[0.12] px-3 text-[12.5px] font-medium text-white/70 outline-none transition-colors duration-150 hover:border-transparent hover:bg-brand hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:opacity-50';
+
+/** Bölüm başlığı: başlık (+ sayı rozeti), ipucu ve sağda isteğe bağlı eylem. */
+function SectionHead({
+  title,
+  hint,
+  badge,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  badge?: number;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 text-[16px] font-medium tracking-[-0.012em] text-white">
+          {title}
+          {badge != null ? (
+            <span className="rounded-full bg-white/[0.07] px-2 py-px text-[12px] font-normal tabular-nums text-white/55">{badge}</span>
+          ) : null}
+        </h2>
+        {hint ? <p className="mt-1 text-[12.5px] leading-relaxed text-white/40">{hint}</p> : null}
+      </div>
+      {action}
+    </div>
+  );
+}
 
 const ALLOWED = ['.pdf', '.zip', '.rar', '.7z', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg'];
 const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.webp'];
@@ -700,9 +740,32 @@ export function BirimTalepForm({
     }
   };
 
+  const [noteOpen, setNoteOpen] = useState<Record<number, boolean>>({});
+  const unitName = departments.find((d) => d.id === selectedDeptId)?.name;
+  const neededByLabel = neededBy ? neededBy.split('-').reverse().join('.') : '';
+
+  const submitLabel = saving ? (
+    <>
+      <Loader2 className="size-[18px] animate-spin" />
+      {sendOnSave ? 'Gönderiliyor' : 'Kaydediliyor'}
+    </>
+  ) : sendOnSave ? (
+    <>
+      <Send className="size-[18px] transition-transform duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] group-hover/send:-translate-y-0.5 group-hover/send:translate-x-1" />
+      {isRejected ? 'Yeniden gönder' : 'Talebi ilet'}
+    </>
+  ) : (
+    <>
+      <Save className="size-[18px]" />
+      Değişiklikleri kaydet
+    </>
+  );
+  const submitClass =
+    'press group/send inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] bg-brand text-[14.5px] font-semibold text-primary-foreground outline-none transition-colors duration-200 hover:bg-[#e4c43c] focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-60';
+
   return (
-    <form onSubmit={submit} className="mx-auto max-w-4xl space-y-5 pb-8">
-      <div data-tour="birim-form-head">
+    <form onSubmit={submit} className="@container mx-auto max-w-[1240px] pb-24 @min-[900px]:pb-8">
+      <div data-tour="birim-form-head" className="pb-6">
         <button
           type="button"
           onClick={() => {
@@ -714,14 +777,15 @@ export function BirimTalepForm({
               backHref || (user?.role === 'DEPARTMENT' ? '/taleplerim' : '/internal-requests')
             );
           }}
-          className="mb-2 text-sm text-muted-foreground hover:text-foreground"
+          className="group/back mb-3 inline-flex items-center gap-1 rounded-full py-1 pl-1.5 pr-3 text-[13px] text-white/50 outline-none transition-colors duration-150 hover:text-white focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          ← Geri
+          <ChevronLeft className="size-4 transition-transform duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] group-hover/back:-translate-x-0.5" />
+          Geri
         </button>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-[32px] font-medium leading-[1.08] tracking-[-0.035em] text-white sm:text-[38px]">
           <SmokeText text={!draft ? 'Yeni talep' : isDraft ? 'Taslağı düzenle' : 'Talebi düzenle'} />
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-2.5 max-w-[66ch] text-[14px] leading-relaxed text-white/45">
           {!draft
             ? 'Talep, Satın Alma Birimi Yetkilisine iletilir. Kalemleri tek tek veya Excel ile yükleyebilirsiniz.'
             : isDraft
@@ -732,322 +796,350 @@ export function BirimTalepForm({
         </p>
       </div>
 
-      <section
-        id="birim-excel"
-        className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3"
-        data-tour="birim-form-excel"
-      >
-        <div>
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4 text-primary" />
-            Excel ile toplu kalem
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Şablon: Ürün Adı, Miktar, Birim, Açıklama. Listede olmayan birim (koli, teneke…) Excel’e
-            yazılır; sisteme isteğe bağlı kaydolur.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => void downloadTemplate()}
-            disabled={downloadingTemplate}
-          >
-            {downloadingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Şablon indir
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={() => excelInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4" />
-            Hazır Excel yükle
-          </Button>
-          <input
-            ref={excelInputRef}
-            type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void importExcel(f);
-            }}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-white/10 bg-black/20 p-5 space-y-4" data-tour="birim-form-info">
-        <div>
-          <h2 className="text-sm font-semibold">Talep bilgileri</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Konu ve birim zorunlu; açıklama satın almanın işini kolaylaştırır.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Talep konusu</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Örn. Bakım malzemesi temini"
-              required
-              className="h-11 rounded-xl px-3"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Talep eden birim</Label>
-            {departments.length ? (
-              <SearchableCombobox
-                options={unitOptions}
-                value={selectedDeptId}
-                onChange={(id) => {
-                  setSelectedDeptId(id);
-                  setSelectedWorkerId(null);
-                }}
-                placeholder="Birim ara ve seçin…"
-                allowClear={false}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Birim listesi henüz tanımlanmamış. Sistem yöneticisinin eklemesi gerekir.
-              </p>
-            )}
-          </div>
-          {selectedIsBlue && user?.role !== 'DEPARTMENT' ? (
-            <div className="space-y-2">
-              <Label>Usta / çalışan (isteğe bağlı)</Label>
-              <SearchableCombobox
-                options={workerOptions}
-                value={selectedWorkerId}
-                onChange={setSelectedWorkerId}
-                placeholder="Usta ara…"
-                allowClear
-              />
+      <div className="grid items-start gap-5 @min-[900px]:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Sol: ne isteniyor (bilgi + kalemler). Her şey tek akışta, ekranı doldurur. */}
+        <div className="stagger min-w-0 space-y-5">
+          <section className={sectionClass} data-tour="birim-form-info">
+            <SectionHead title="Talep bilgileri" hint="Konu ve birim zorunlu; açıklama satın almanın işini kolaylaştırır." />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label className={labelClass}>Talep konusu</Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Örn. Bakım malzemesi temini"
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelClass}>Talep eden birim</Label>
+                {departments.length ? (
+                  <SearchableCombobox
+                    options={unitOptions}
+                    value={selectedDeptId}
+                    onChange={(id) => {
+                      setSelectedDeptId(id);
+                      setSelectedWorkerId(null);
+                    }}
+                    placeholder="Birim ara ve seçin…"
+                    allowClear={false}
+                    controlClassName="h-11 rounded-[12px] border-white/[0.08] bg-white/[0.03] px-3 text-[14px] transition-colors duration-200 hover:border-brand/50"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Birim listesi henüz tanımlanmamış. Sistem yöneticisinin eklemesi gerekir.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className={labelClass}>Ne zamana kadar lazım?</Label>
+                <Input type="date" value={neededBy} onChange={(e) => setNeededBy(e.target.value)} className={inputClass} />
+              </div>
+              {selectedIsBlue && user?.role !== 'DEPARTMENT' ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className={labelClass}>Usta / çalışan (isteğe bağlı)</Label>
+                  <SearchableCombobox
+                    options={workerOptions}
+                    value={selectedWorkerId}
+                    onChange={setSelectedWorkerId}
+                    placeholder="Usta ara…"
+                    allowClear
+                    controlClassName="h-11 rounded-[12px] border-white/[0.08] bg-white/[0.03] px-3 text-[14px] transition-colors duration-200 hover:border-brand/50"
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-2 sm:col-span-2">
+                <Label className={labelClass}>Talep açıklaması</Label>
+                <PasteRichInput
+                  toolbar
+                  placeholder="Ne ve ne için gerekiyor? Marka, model, ölçü gibi ayrıntıları da yazabilirsiniz."
+                  onChange={setNotes}
+                  initialHtml={draft?.description || ''}
+                  className="rounded-none"
+                />
+              </div>
             </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label>Ne zamana kadar lazım?</Label>
-            <Input
-              type="date"
-              value={neededBy}
-              onChange={(e) => setNeededBy(e.target.value)}
-              className="h-11 rounded-xl px-3"
+          </section>
+
+          <section className={cn(sectionClass, '@container')} data-tour="birim-form-items">
+            <SectionHead
+              title="Kalemler"
+              hint="Listeden seçin ya da “koli” gibi yeni bir birim yazın."
+              badge={items.length}
+              action={
+                <div id="birim-excel" data-tour="birim-form-excel" className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void downloadTemplate()}
+                    disabled={downloadingTemplate}
+                    className={ghostBtn}
+                  >
+                    {downloadingTemplate ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                    Şablon indir
+                  </button>
+                  <button type="button" onClick={() => excelInputRef.current?.click()} className={ghostBtn}>
+                    <FileSpreadsheet className="size-3.5" />
+                    Excel yükle
+                  </button>
+                  <input
+                    ref={excelInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void importExcel(f);
+                    }}
+                  />
+                </div>
+              }
             />
-            <p className="text-[11px] text-muted-foreground">
-              Satın alma aciliyeti buradan görür. İsteğe bağlı.
-            </p>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Talep açıklaması</Label>
-            <PasteRichInput
-              toolbar
-              placeholder="Ne ve ne için gerekiyor? Marka, model, ölçü gibi ayrıntıları da yazabilirsiniz."
-              onChange={setNotes}
-              initialHtml={draft?.description || ''}
-              className="rounded-none"
-            />
-          </div>
-        </div>
-      </section>
 
-      <section className="rounded-2xl border border-white/10 bg-black/20 p-5 space-y-4" data-tour="birim-form-items">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">Kalemler</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {items.length} kalem · listeden seçin veya “koli” gibi yeni birim yazın / ekleyin
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={addItem}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Kalem ekle
-          </button>
-        </div>
+            <div className="hidden grid-cols-[28px_minmax(0,1fr)_104px_190px_44px] gap-x-3 px-3.5 text-[12px] font-medium text-white/35 @min-[600px]:grid">
+              <span />
+              <span>Ürün / hizmet</span>
+              <span>Miktar</span>
+              <span>Birim</span>
+              <span />
+            </div>
 
-        <div className="hidden md:grid grid-cols-12 gap-2 px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          <span className="col-span-6">Ürün / hizmet</span>
-          <span className="col-span-2">Miktar</span>
-          <span className="col-span-3">Birim (Adet, kutu, palet…)</span>
-          <span className="col-span-1" />
-        </div>
+            <div className="space-y-2.5">
+              {items.map((item, idx) => {
+                const photoCount = item.photos.length + item.savedPhotos.length;
+                const hasExtra = Boolean(item.notes?.trim()) || photoCount > 0;
+                const extraOpen = Boolean(noteOpen[idx]) || hasExtra;
+                return (
+                  <div
+                    key={idx}
+                    className="group/item relative rounded-[16px] border border-white/[0.07] bg-white/[0.02] transition-colors duration-200 hover:border-white/[0.14] focus-within:border-brand/40"
+                  >
+                    <div className="grid grid-cols-[28px_minmax(0,1fr)_44px] items-start gap-x-3 gap-y-2.5 p-3.5 @min-[600px]:grid-cols-[28px_minmax(0,1fr)_104px_190px_44px]">
+                      <span className="mt-[11px] flex size-6 items-center justify-center rounded-full bg-white/[0.06] text-[11.5px] font-medium tabular-nums text-white/55 transition-colors duration-200 group-focus-within/item:bg-brand group-focus-within/item:text-primary-foreground">
+                        {idx + 1}
+                      </span>
+                      <Input
+                        data-kalem-name={idx}
+                        value={item.productName}
+                        onChange={(e) => updateItem(idx, { productName: e.target.value })}
+                        placeholder={`Kalem ${idx + 1}`}
+                        className={inputClass}
+                        aria-label={`Kalem ${idx + 1} ürün / hizmet`}
+                      />
+                      <button
+                        type="button"
+                        disabled={items.length === 1}
+                        onClick={() => {
+                          setItems((prev) => prev.filter((_, i) => i !== idx));
+                          setNoteOpen({});
+                        }}
+                        className="press inline-flex size-11 items-center justify-center rounded-[12px] text-white/40 outline-none transition-colors duration-150 hover:bg-destructive/15 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:pointer-events-none disabled:opacity-30 @min-[600px]:order-last"
+                        aria-label="Kalemi sil"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                      <div className="col-span-3 grid grid-cols-[104px_minmax(0,1fr)] gap-3 @min-[600px]:contents">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(idx, { quantity: e.target.value })}
+                          className={inputClass}
+                          aria-label={`Kalem ${idx + 1} miktar`}
+                        />
+                        <div className="min-w-0 space-y-1">
+                          <SearchableCombobox
+                            options={quantityUnitOptions}
+                            value={item.unit}
+                            onChange={(v) => void applyUnit(idx, v || '')}
+                            placeholder="Adet, koli, teneke…"
+                            emptyText="Listede yok — yazıp Enter’a basın"
+                            allowClear={false}
+                            allowCustom
+                            controlClassName="h-11 rounded-[12px] border-white/[0.08] bg-white/[0.03] px-3 text-[14px] transition-colors duration-200 hover:border-brand/50"
+                          />
+                          <button
+                            type="button"
+                            className="text-[12px] text-brand outline-none transition-colors duration-150 hover:text-[#e4c43c] focus-visible:underline"
+                            onClick={() => {
+                              setNewUnitItemIdx(idx);
+                              setNewUnitName('');
+                              setNewUnitOpen(true);
+                            }}
+                          >
+                            Listede yoksa yeni birim ekle
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-        <div className="space-y-3">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className="grid grid-cols-1 gap-2 rounded-xl border border-white/10 bg-black/25 p-3 md:grid-cols-12 md:items-start"
+                    <div className="border-t border-white/[0.05] px-3.5 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setNoteOpen((s) => ({ ...s, [idx]: !extraOpen }))}
+                        aria-expanded={extraOpen}
+                        className="group/note flex items-center gap-1.5 rounded-[8px] py-1 pr-2 text-[12.5px] text-white/45 outline-none transition-colors duration-150 hover:text-white focus-visible:text-white"
+                      >
+                        <ChevronDown className={cn('size-3.5 transition-transform duration-300', extraOpen && 'rotate-180')} />
+                        Not ve fotoğraf
+                        {hasExtra ? (
+                          <span className="rounded-full bg-brand/15 px-1.5 py-px text-[11px] tabular-nums text-brand">
+                            {[item.notes?.trim() ? 'not' : '', photoCount ? `${photoCount} foto` : ''].filter(Boolean).join(' · ')}
+                          </span>
+                        ) : null}
+                      </button>
+                      <div
+                        className={cn(
+                          'grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                          extraOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                        )}
+                      >
+                        <div className="min-h-0 overflow-hidden">
+                          <div className="space-y-2 pb-2 pt-1.5">
+                            <AutoGrowTextarea
+                              value={item.notes}
+                              onChange={(next) => updateItem(idx, { notes: next })}
+                              placeholder="Kalem notu (marka, model, ölçü…) — isteğe bağlı"
+                            />
+                            <ItemPhotoField
+                              saved={item.savedPhotos}
+                              pending={item.photos}
+                              draftId={draft?.id}
+                              max={MAX_ITEM_PHOTOS}
+                              onAdd={(list) => onItemPhotos(idx, list)}
+                              onRemoveSaved={(id) => removeSavedPhoto(idx, id)}
+                              onRemovePending={(photoIdx) =>
+                                updateItem(idx, { photos: item.photos.filter((_, i) => i !== photoIdx) })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={addItem}
+              className="press flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/[0.16] text-[13.5px] font-medium text-white/60 outline-none transition-[border-color,color,background-color] duration-200 hover:border-brand/60 hover:bg-brand/[0.06] hover:text-brand focus-visible:ring-2 focus-visible:ring-brand/40"
             >
-              <div className="md:col-span-6">
-                <Label className="md:hidden text-xs">Ürün / hizmet</Label>
-                <Input
-                  data-kalem-name={idx}
-                  value={item.productName}
-                  onChange={(e) => updateItem(idx, { productName: e.target.value })}
-                  placeholder={`Kalem ${idx + 1}`}
-                  className="h-11 rounded-xl px-3"
-                />
+              <Plus className="size-4" />
+              Kalem ekle
+            </button>
+          </section>
+        </div>
+
+        {/* Sağ: özet ve gönder (masaüstünde ekranla birlikte kayar), altında ekler. */}
+        <aside className="stagger space-y-5 @min-[900px]:sticky @min-[900px]:top-6">
+          <div
+            className="texture-host relative overflow-hidden rounded-[22px] border border-white/[0.09] bg-card p-5 sm:p-6"
+            data-tour="birim-form-submit"
+          >
+            <span aria-hidden className="tile-texture tile-texture-down" />
+            <div className="relative">
+              <p className="text-[12.5px] font-medium text-white/45">Özet</p>
+              <div className="mt-3 flex items-baseline gap-2.5">
+                <span className="text-[52px] font-[200] leading-[0.9] tracking-[-0.05em] text-white tabular-nums">{items.length}</span>
+                <span className="text-[14px] text-white/45">kalem</span>
               </div>
-              <div className="md:col-span-2">
-                <Label className="md:hidden text-xs">Miktar</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(idx, { quantity: e.target.value })}
-                  className="h-11 rounded-xl px-3"
-                />
-              </div>
-              <div className="md:col-span-3 space-y-1">
-                <Label className="md:hidden text-xs">Birim</Label>
-                <SearchableCombobox
-                  options={quantityUnitOptions}
-                  value={item.unit}
-                  onChange={(v) => void applyUnit(idx, v || '')}
-                  placeholder="Adet, koli, teneke…"
-                  emptyText="Listede yok — yazıp Enter’a basın"
-                  allowClear={false}
-                  allowCustom
-                  controlClassName="h-11 rounded-xl px-3"
-                />
-                <button
-                  type="button"
-                  className="text-[11px] text-primary hover:underline"
-                  onClick={() => {
-                    setNewUnitItemIdx(idx);
-                    setNewUnitName('');
-                    setNewUnitOpen(true);
-                  }}
-                >
-                  Listede yoksa yeni birim ekle
+              <dl className="mt-5 space-y-2.5 border-t border-hairline pt-4 text-[13px]">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-white/40">Birim</dt>
+                  <dd className="min-w-0 truncate text-right text-white/85">{unitName || '—'}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-white/40">Gerekli tarih</dt>
+                  <dd className="text-white/85 tabular-nums">{neededByLabel || 'Belirtilmedi'}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-white/40">Ekler</dt>
+                  <dd className="text-white/85 tabular-nums">{files.length}</dd>
+                </div>
+              </dl>
+              <div className="mt-5 hidden space-y-2.5 @min-[900px]:block">
+                <button type="submit" disabled={saving} className={submitClass}>
+                  {submitLabel}
                 </button>
-              </div>
-              <div className="flex md:col-span-1 md:justify-end">
-                <button
-                  type="button"
-                  disabled={items.length === 1}
-                  onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-30"
-                  aria-label="Kalemi sil"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="md:col-span-12 space-y-2">
-                <AutoGrowTextarea
-                  value={item.notes}
-                  onChange={(next) => updateItem(idx, { notes: next })}
-                  placeholder="Kalem notu (marka, model, ölçü…) — isteğe bağlı"
-                />
-                <ItemPhotoField
-                  saved={item.savedPhotos}
-                  pending={item.photos}
-                  draftId={draft?.id}
-                  max={MAX_ITEM_PHOTOS}
-                  onAdd={(list) => onItemPhotos(idx, list)}
-                  onRemoveSaved={(id) => removeSavedPhoto(idx, id)}
-                  onRemovePending={(photoIdx) =>
-                    updateItem(idx, { photos: item.photos.filter((_, i) => i !== photoIdx) })
-                  }
-                />
+                {draft && isDraft ? (
+                  <button
+                    type="button"
+                    onClick={removeDraft}
+                    disabled={saving}
+                    className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-[13px] border border-destructive/30 text-[13.5px] font-medium text-destructive outline-none transition-colors duration-150 hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-60"
+                  >
+                    <Trash2 className="size-4" />
+                    Taslağı sil
+                  </button>
+                ) : null}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-white/10 bg-black/20 p-5 space-y-4" data-tour="birim-form-files">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">Ekler</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Şartname, teklif, fotoğraf… İsteğe bağlı.
-            </p>
           </div>
-          <span className="shrink-0 text-xs text-muted-foreground">{files.length}/8 dosya</span>
-        </div>
-        <label
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            onFiles(e.dataTransfer.files);
-          }}
-          className={`flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 text-center transition-colors ${
-            dragging ? 'border-primary bg-primary/10' : 'border-white/15 hover:bg-white/5'
-          }`}
-        >
-          <Paperclip className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Dosya seç veya sürükleyip bırak</span>
-          <span className="text-xs text-muted-foreground">
-            PDF, Word, Excel, görsel, ZIP/RAR — en fazla 8 dosya, toplam 50 MB
-          </span>
-          <input
-            type="file"
-            multiple
-            className="hidden"
-            accept={ALLOWED.join(',')}
-            onChange={(e) => onFiles(e.target.files)}
-          />
-        </label>
-        <PendingFiles files={files} onRemove={(idx) => setFiles(files.filter((_, i) => i !== idx))} />
-        {draft?.attachments?.length ? (
-          <div className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Kayıtlı ekler: </span>
-            {draft.attachments.map((a) => a.originalName).join(', ')}
-          </div>
-        ) : null}
-      </section>
 
-      {/* Uzun formda da erişilebilir kalsın diye sayfanın altına yapışır */}
-      <div className="sticky bottom-0 z-30 rounded-xl border border-white/10 bg-background/80 p-3 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/70" data-tour="birim-form-submit">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          {draft && isDraft && (
+          <section className={sectionClass} data-tour="birim-form-files">
+            <SectionHead
+              title="Ekler"
+              hint="Şartname, teklif, fotoğraf… İsteğe bağlı."
+              action={<span className="shrink-0 text-[12.5px] tabular-nums text-white/40">{files.length}/8</span>}
+            />
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                onFiles(e.dataTransfer.files);
+              }}
+              className={`flex min-h-[112px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[16px] border border-dashed px-4 text-center transition-[border-color,background-color] duration-200 ${
+                dragging ? 'border-brand bg-brand/10' : 'border-white/[0.14] hover:border-brand/40 hover:bg-white/[0.03]'
+              }`}
+            >
+              <Paperclip className={cn('size-5 transition-transform duration-300', dragging ? '-translate-y-0.5 text-brand' : 'text-white/40')} />
+              <span className="text-[14px] font-medium text-white">Dosya seç veya sürükleyip bırak</span>
+              <span className="text-[12px] leading-relaxed text-white/40">
+                PDF, Word, Excel, görsel, ZIP/RAR — en fazla 8 dosya, toplam 50 MB
+              </span>
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                accept={ALLOWED.join(',')}
+                onChange={(e) => onFiles(e.target.files)}
+              />
+            </label>
+            <PendingFiles files={files} onRemove={(idx) => setFiles(files.filter((_, i) => i !== idx))} />
+            {draft?.attachments?.length ? (
+              <div className="text-[12.5px] leading-relaxed text-white/45">
+                <span className="font-medium text-white/80">Kayıtlı ekler: </span>
+                {draft.attachments.map((a) => a.originalName).join(', ')}
+              </div>
+            ) : null}
+          </section>
+        </aside>
+      </div>
+
+      {/* Dar ekranda gönder düğmesi sayfanın altına yapışır (masaüstünde özet kutusunda). */}
+      <div className="fixed inset-x-3 bottom-3 z-30 rounded-[20px] border border-white/[0.09] bg-[#161618]/85 p-2.5 shadow-[var(--shadow-float)] backdrop-blur-xl @min-[900px]:hidden">
+        <div className="flex gap-2.5">
+          {draft && isDraft ? (
             <button
               type="button"
               onClick={removeDraft}
               disabled={saving}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 text-sm font-bold uppercase tracking-wider text-destructive transition-all hover:bg-destructive/20 disabled:opacity-60"
+              aria-label="Taslağı sil"
+              className="press inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] border border-destructive/30 text-destructive outline-none transition-colors duration-150 hover:bg-destructive/10 disabled:opacity-60"
             >
-              <Trash2 className="h-5 w-5" />
-              TASLAĞI SİL
+              <Trash2 className="size-[18px]" />
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex h-12 flex-[1.5] items-center justify-center gap-3 rounded-xl bg-primary text-sm font-black uppercase tracking-wider text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] hover:opacity-90 disabled:opacity-60"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                {sendOnSave ? 'GÖNDERİLİYOR' : 'KAYDEDİLİYOR'}
-              </>
-            ) : sendOnSave ? (
-              <>
-                <Send className="h-5 w-5" />
-                {isRejected ? 'YENİDEN GÖNDER' : 'TALEBİ İLET'}
-              </>
-            ) : (
-              <>
-                <Save className="h-5 w-5" />
-                DEĞİŞİKLİKLERİ KAYDET
-              </>
-            )}
+          ) : null}
+          <button type="submit" disabled={saving} className={submitClass}>
+            {submitLabel}
           </button>
         </div>
       </div>

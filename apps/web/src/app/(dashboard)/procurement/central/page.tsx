@@ -560,10 +560,12 @@ export default function CentralProcurementPage() {
       </div>
 
       {/* ── Liste. overflow-clip (hidden değil): sütun başlığı kayarken üstte yapışık kalabilsin. ── */}
-      <section className="overflow-clip rounded-[22px] border border-white/[0.07] bg-card">
+      <section className="texture-host relative overflow-clip rounded-[22px] border border-white/[0.07] bg-card">
+        {/* Üstteki özet kutusunun dokusu buraya da iner: yukarıda belirgin, aşağı doğru söner (degrade yok). */}
+        <span aria-hidden className="tile-texture tile-texture-down" />
         <div
           aria-hidden
-          className={`sticky top-0 z-[3] hidden border-b border-hairline bg-card px-6 py-3 text-[12px] font-medium text-white/40 ${COLS}`}
+          className={`sticky top-0 z-[3] hidden border-b border-hairline bg-card/75 px-6 py-3 text-[12px] font-medium text-white/40 backdrop-blur-md ${COLS}`}
         >
           <span>Talep</span>
           <span>Departman</span>

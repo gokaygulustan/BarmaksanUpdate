@@ -53,15 +53,22 @@ const CAP = 16;
  * uzun sürünce yüzey takılıyordu.) Kapaklar ölçeklenmez, köşe yarıçapı hiç bozulmaz.
  */
 function surfaceTransforms(r: RowRect, baseW: number) {
-  const sx = baseW > 0 ? r.width / baseW : 1;
-  const h = Math.max(r.height, CAP * 2);
+  // Tam piksele yuvarlanır: parçaların kenarı yarım pikselde kalırsa birleşim yerinde ince bir çizgi görünür.
+  const top = Math.round(r.top);
+  const left = Math.round(r.left);
+  const width = Math.max(1, Math.round(r.width));
+  const h = Math.max(Math.round(r.height), CAP * 2);
+  const sx = baseW > 0 ? width / baseW : 1;
   return {
-    top: `translate(${r.left}px, ${r.top}px) scaleX(${sx})`,
-    bottom: `translate(${r.left}px, ${r.top + h - CAP}px) scaleX(${sx})`,
-    // Dolgu 1 px fazla uzar: iki kapakla üst üste biner, dikişte ince çizgi kalmaz.
-    fill: `translate(${r.left}px, ${r.top + CAP - 0.5}px) scale(${sx}, ${Math.max(h - CAP * 2 + 1, 1)})`,
+    top: `translate(${left}px, ${top}px) scaleX(${sx})`,
+    bottom: `translate(${left}px, ${top + h - CAP}px) scaleX(${sx})`,
+    // Dolgu iki yandan 2 px kapaklara biner: kapakların yarı saydam kenar pikseli dolgunun altında kalır.
+    fill: `translate(${left}px, ${top + CAP - 2}px) scale(${sx}, ${Math.max(h - CAP * 2 + 4, 1)})`,
   };
 }
+
+/** Listenin gerçek (kesirli olabilen) genişliği: yüzey bu genişliğe göre ölçeklenir. */
+const listWidth = (list: HTMLElement | null, fallback: number) => list?.getBoundingClientRect().width || fallback;
 
 /** Uzama anında yüzey incelir (eski scaleX 0.84): dar hâli kendi ortasında hesaplanır. */
 function squeezed(r: RowRect, k: number): RowRect {
@@ -132,7 +139,7 @@ function useMeltIndicator(
       blob.style.opacity = visible;
       rail.style.opacity = visible;
       if (rect) {
-        applySurface(blob, rect, listRef.current?.clientWidth || rect.width);
+        applySurface(blob, rect, listWidth(listRef.current, rect.width));
         rail.style.transform = railTransform(rect.top + 9, Math.max(rect.height - 18, 8));
       }
       paintInk();
@@ -168,7 +175,7 @@ function useMeltIndicator(
     const spanH = Math.max(from.top + from.height, rect.top + rect.height) - spanTop;
     const stretchEase = 'cubic-bezier(0.55, 0, 0.25, 1)';
     const settleEase = 'cubic-bezier(0.3, 1.45, 0.55, 1)';
-    const baseW = listRef.current?.clientWidth || rect.width;
+    const baseW = listWidth(listRef.current, rect.width);
     // Uzama anındaki yüzey: iki satırı kaplar, yatayda ortalama genişlikte ve %16 incelmiş.
     const span = squeezed(
       {

@@ -105,8 +105,13 @@ function RequestCard({
   return (
     <Link
       href={href}
-      className="skel-in group/card block rounded-[12px] border border-white/[0.07] bg-card px-3.5 py-3 outline-none transition-colors duration-150 hover:border-white/[0.16] focus-visible:border-brand/60"
+      className="skel-in group/card relative block overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#1c1c1f] px-3.5 py-3 outline-none transition-[border-color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-brand/40 hover:bg-[#202023] focus-visible:border-brand/60 active:translate-y-0"
     >
+      {/* Soldan altın çizgi: üzerine gelince ortadan açılır. */}
+      <span
+        aria-hidden
+        className="absolute inset-y-2.5 left-0 w-[2px] origin-center scale-y-0 rounded-r-full bg-brand transition-transform duration-300 ease-out group-hover/card:scale-y-100"
+      />
       <p className="line-clamp-2 text-[14px] font-medium leading-snug text-white">{row.title}</p>
       <p className={cn('mt-1 text-[12.5px] leading-snug', rejected ? 'text-[#f2705e]' : 'text-white/50')}>
         {pipeline.caption}
@@ -171,14 +176,35 @@ function ColumnHeader({ label, count }: { label: string; count: number }) {
   );
 }
 
-/** Boş aşama: başlığı kadar dar sütun; sırası görünür kalır, panoyu genişletmez. */
+/** Sütun kutusunun zemini: üstte hafif sarımtırak degrade + marka dokusu (aşağı doğru söner). */
+function BoxBackdrop({ strong = true }: { strong?: boolean }) {
+  return (
+    <>
+      <span aria-hidden className="tile-texture tile-texture-down" />
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute inset-0',
+          strong
+            ? 'bg-[linear-gradient(180deg,rgba(217,182,37,0.09),rgba(217,182,37,0.025)_42%,transparent_72%)]'
+            : 'bg-[linear-gradient(180deg,rgba(217,182,37,0.05),transparent_60%)]',
+        )}
+      />
+    </>
+  );
+}
+
+/** Boş aşama: başlığı kadar dar kutu; sırası görünür kalır, panoyu genişletmez. */
 function EmptyColumn({ label }: { label: string }) {
   return (
-    <section className="flex w-max min-w-[120px] shrink-0 flex-col max-md:snap-start">
-      <ColumnHeader label={label} count={0} />
-      <p className="rounded-[12px] border border-dashed border-white/[0.07] py-6 text-center text-[12.5px] text-white/30">
-        Talep yok
-      </p>
+    <section className="texture-host relative flex w-max min-w-[128px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-white/[0.06] bg-card p-3 max-md:snap-start">
+      <BoxBackdrop strong={false} />
+      <div className="relative">
+        <ColumnHeader label={label} count={0} />
+        <p className="rounded-[12px] border border-dashed border-white/[0.07] py-6 text-center text-[12.5px] text-white/30">
+          Talep yok
+        </p>
+      </div>
     </section>
   );
 }
@@ -203,9 +229,12 @@ function Column({
   footer?: ReactNode;
 } & CardProps) {
   return (
-    <section className="flex min-w-[220px] flex-1 flex-col max-md:min-w-[80vw] max-md:snap-start">
-      <ColumnHeader label={label} count={count} />
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-2 [scrollbar-width:thin]">
+    <section className="texture-host relative flex min-w-[220px] flex-1 flex-col overflow-hidden rounded-[20px] border border-white/[0.07] bg-card p-3 max-md:min-w-[80vw] max-md:snap-start">
+      <BoxBackdrop />
+      <div className="relative">
+        <ColumnHeader label={label} count={count} />
+      </div>
+      <div className="relative min-h-0 flex-1 space-y-2 overflow-y-auto pb-1 [scrollbar-width:thin]">
         {loading ? (
           <div aria-hidden className="space-y-2">
             {[0, 1, 2].map((i) => (
