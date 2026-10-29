@@ -14,7 +14,6 @@ import { showsProductionItemMeta } from '@/lib/access';
 import { procurementStatusLabel } from '@/lib/procurementStatus';
 import {
   EmptyState,
-  Initial,
   LoadingState,
   PageHeader,
   SearchField,
@@ -250,66 +249,36 @@ export default function AnalysisReportsPage() {
                 <Link
                   key={req.id}
                   href={`/procurement/${req.id}/analysis`}
-                  className="bento-tile gold-fade texture-host group/card relative flex min-h-[216px] flex-col overflow-hidden rounded-[22px] border border-white/[0.07] bg-card p-5 outline-none focus-visible:border-brand/60 sm:p-6"
+                  className="bento-tile gold-fade texture-host group/card relative flex min-h-[148px] flex-col overflow-hidden rounded-[20px] border border-white/[0.07] bg-card p-4 outline-none focus-visible:border-brand/60 sm:p-5"
                 >
-                  {/* Marka dokusu üstte belirgin, aşağı doğru söner; üstüne hafif sarımtırak degrade. */}
+                  {/* Doku her zaman; sarımtırak degrade yalnızca üzerine gelince belirir. */}
                   <span aria-hidden className="tile-texture tile-texture-down" />
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,rgba(217,182,37,0.09),rgba(217,182,37,0.02)_46%,transparent_70%)]"
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,rgba(217,182,37,0.1),rgba(217,182,37,0.025)_50%,transparent_75%)] opacity-0 transition-opacity duration-500 group-hover/card:opacity-100 group-focus-visible/card:opacity-100"
                   />
                   <span
                     aria-hidden
-                    className="absolute inset-x-6 bottom-0 h-[2px] origin-left scale-x-0 rounded-full bg-brand transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-x-100"
+                    className="absolute inset-x-5 bottom-0 h-[2px] origin-left scale-x-0 rounded-full bg-brand transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-x-100"
                   />
 
-                  <div className="relative flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                        <StatusChip
-                          status={req.status}
-                          label={ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}
-                        />
-                        <span className="text-[12px] tabular-nums text-white/40">
-                          {format(new Date(req.createdAt), 'd MMM yyyy', { locale: tr })}
-                        </span>
-                      </div>
-                      <h3 className="mt-4 line-clamp-2 text-[17px] font-medium leading-snug tracking-[-0.012em] text-white [overflow-wrap:anywhere] transition-transform duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] group-hover/card:-translate-y-0.5">
-                        {req.title}
-                      </h3>
-                    </div>
-                    {/* Büyük ince rakam: kalem sayısı (panodaki sayı diliyle). */}
-                    <div className="shrink-0 text-right">
-                      <span className="block text-[46px] font-[200] leading-[0.9] tracking-[-0.05em] text-white tabular-nums transition-colors duration-300 group-hover/card:text-brand-ink">
-                        {itemCount}
-                      </span>
-                      <span className="mt-1.5 block text-[12px] text-white/40">kalem</span>
-                    </div>
+                  <div className="relative flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <StatusChip
+                      status={req.status}
+                      label={ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}
+                    />
+                    <span className="text-[12px] tabular-nums text-white/40">
+                      {format(new Date(req.createdAt), 'd MMM yyyy', { locale: tr })}
+                    </span>
                   </div>
 
-                  {/* Teklif veren firmalar: ilk üçü ad çipi, kalanı sayı. */}
-                  <div className="relative mt-5 flex flex-wrap gap-1.5">
-                    {vendors.slice(0, 3).map((a, i) => (
-                      <span
-                        key={i}
-                        title={a.vendor.name}
-                        className="inline-flex max-w-[150px] items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-0.5 pl-0.5 pr-2.5 text-[12px] text-white/65 transition-colors duration-300 group-hover/card:border-brand/25"
-                      >
-                        <Initial name={a.vendor.name} className="size-5 text-[10px] ring-0" />
-                        <span className="truncate">{a.vendor.name}</span>
-                      </span>
-                    ))}
-                    {vendors.length > 3 ? (
-                      <span className="inline-flex h-[26px] items-center rounded-full border border-white/[0.08] px-2.5 text-[12px] tabular-nums text-white/45">
-                        +{vendors.length - 3}
-                      </span>
-                    ) : null}
-                    {vendors.length === 0 ? <span className="text-[12.5px] text-white/35">Henüz tedarikçi yok</span> : null}
-                  </div>
+                  <h3 className="relative mt-3 line-clamp-2 text-[15.5px] font-medium leading-snug tracking-[-0.01em] text-white [overflow-wrap:anywhere] transition-transform duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] group-hover/card:-translate-y-0.5">
+                    {req.title}
+                  </h3>
 
-                  <div className="relative mt-auto flex items-center justify-between gap-3 pt-5">
-                    <span className="flex items-center gap-2 text-[12.5px] tabular-nums text-white/45">
-                      {vendors.length} tedarikçi
+                  <div className="relative mt-auto flex items-center justify-between gap-3 pt-4">
+                    <span className="text-[12.5px] tabular-nums text-white/45">
+                      {itemCount} kalem · {vendors.length} tedarikçi
                     </span>
                     <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/55 transition-colors duration-300 group-hover/card:text-brand">
                       {ready ? 'Analizi başlat' : 'Raporu aç'}

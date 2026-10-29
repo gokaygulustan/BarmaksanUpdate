@@ -107,13 +107,9 @@ function RequestCard({
       href={href}
       className="skel-in texture-host group/card relative block overflow-hidden rounded-[16px] border border-white/[0.08] bg-card px-4 py-3.5 outline-none transition-[border-color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-brand/40 focus-visible:border-brand/60 active:translate-y-0 active:duration-100"
     >
-      {/* Kartın içinde: marka dokusu (üstte belirgin, aşağı doğru söner) ve hafif sarımtırak degrade.
-          Kartların arkası (sayfa zemini) boş kalır. İmleç kartın üstündeyken doku yavaşça kayar. */}
+      {/* Kartın içinde marka dokusu (üstte belirgin, aşağı doğru söner); degrade yok. Kartların arkası
+          (sayfa zemini) boş kalır. İmleç kartın üstündeyken doku yavaşça kayar. */}
       <span aria-hidden className="tile-texture tile-texture-down" />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,rgba(217,182,37,0.12),rgba(217,182,37,0.03)_52%,transparent_78%)] transition-opacity duration-300 group-hover/card:opacity-100"
-      />
       {/* Soldan altın çizgi: üzerine gelince ortadan açılır. */}
       <span
         aria-hidden
