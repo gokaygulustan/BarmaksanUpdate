@@ -1,0 +1,60 @@
+# main'e her push: web "chunk"ları (Next derleme çıktısı) ve API kodu hazırlanır, "tester-latest"
+# sürümüne konur. Test sunucusu (VDS) bu sürümü dakikada bir yoklar ve yeni olanı çeker
+# (deploy/vds/update.sh). Docker imajı yalnızca bağımlılık / Dockerfile / Prisma şeması
+# değişince yeniden kurulur; sıradan kod değişikliği ~15 sn içinde yayına girer.
+name: tester-build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tester-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Derle (prisma generate + next build)
+        run: npm run build:prod
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Paketle
+        run: |
+          mkdir -p out
+          tar --exclude=cache -czf out/web-next.tar.gz -C apps/web/.next .
+          tar -czf out/api-src.tar.gz -C apps/api/src .
+          git archive --format=tar.gz -o out/source.tar.gz HEAD
+          # İmaj parmak izi: bunlar değişmediyse Docker imajı yeniden kurulmaz.
+          IMG=$( (cat package-lock.json Dockerfile; find apps/api/prisma -type f | sort | xargs cat) | sha256sum | cut -c1-16 )
+          printf '{"sha":"%s","image":"%s","time":"%s"}\n' "$GITHUB_SHA" "$IMG" "$(date -u +%FT%TZ)" > out/manifest.json
+          cat out/manifest.json
+          ls -la out
+
+      - name: "tester-latest" sürümünü yenile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete tester-latest --cleanup-tag --yes || true
+          gh release create tester-latest out/* \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "tester ${GITHUB_SHA::7}" \
+            --notes "Test sunucusu için otomatik derleme: $GITHUB_SHA"

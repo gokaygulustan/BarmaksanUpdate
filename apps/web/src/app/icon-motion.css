@@ -1,0 +1,371 @@
+/*
+ * Hareketli ikonlar — sitedeki bütün lucide ikonları (svg.lucide-*) için tek katman.
+ * İkon, içinde durduğu düğme / bağlantı / sekmenin üzerine gelince (ya da klavyeyle odaklanınca)
+ * kendi anlamına uygun kısa bir hareket yapar: zil sallanır, dişli döner, kilit açılır, ok ileri
+ * atılır, çizelge çubukları yükselir... Tanımı olmayan ikon çizgilerini yeniden çizer.
+ * Yalnızca transform / stroke-dashoffset; 350–700 ms; dönüşte yay. Dönen yükleyiciler (animate-*)
+ * ve hareket azaltma tercihi hariç.
+ */
+
+:root {
+  --icon-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --icon-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tetikleyiciler: üzerine gelinen etkileşimli öğe ya da ikonun kendisi. Varsayılan kural en düşük
+ * özgüllükte (:where) — aşağıdaki ikona özel hareketler her zaman onu ezer. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [role='link'], [data-icon-trigger]):is(:hover, :focus-visible)
+  :where(svg.lucide:not([class*='animate-'])),
+:where(svg.lucide:not([class*='animate-'])):hover {
+  animation: icon-draw 620ms var(--icon-out) both;
+}
+
+/* Varsayılan: çizgiler baştan çizilir (çizgi uzunluğu 24'lük kutuda hep < 100). */
+@keyframes icon-draw {
+  from {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+  }
+}
+/* Varsayılan çizim ikonun kendisinde değil parçalarında olmalı: svg'ye stroke-dash uygulanınca
+ * çocuklara miras geçer — bu yüzden tanımı olan ikonlarda çizim kapatılıp kendi hareketi verilir. */
+
+/* ── Ortak tetikleyici seçici kısaltması yok (CSS), her ikon için aynı kalıp ─────────────── */
+
+/* Zil: üstten asılı gibi sallanır. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-bell:not([class*='animate-']),
+svg.lucide-bell:hover,
+:where(a, button, [role='button']):is(:hover, :focus-visible) svg:is(.lucide-bell-ring, .lucide-phone, .lucide-phone-call) {
+  transform-origin: 50% 10%;
+  animation: icon-ring 700ms var(--icon-out) both;
+}
+@keyframes icon-ring {
+  0% { transform: rotate(0); }
+  15% { transform: rotate(16deg); }
+  30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-7deg); }
+  75% { transform: rotate(4deg); }
+  100% { transform: rotate(0); }
+}
+
+/* Dişli: çeyrek tur, yayla oturur. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-settings, .lucide-settings-2, .lucide-cog):not([class*='animate-']),
+svg:is(.lucide-settings, .lucide-settings-2, .lucide-cog):hover {
+  animation: icon-turn 700ms var(--icon-spring) both;
+}
+@keyframes icon-turn {
+  from { transform: rotate(0); }
+  to { transform: rotate(90deg); }
+}
+
+/* Yenile / geçmiş: bir tur. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-refresh-cw, .lucide-refresh-ccw, .lucide-rotate-cw, .lucide-rotate-ccw, .lucide-repeat, .lucide-refresh-cw-off):not([class*='animate-']) {
+  animation: icon-spin 650ms var(--icon-out) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-history, .lucide-undo, .lucide-undo-2):not([class*='animate-']) {
+  animation: icon-spin-back 700ms var(--icon-out) both;
+}
+@keyframes icon-spin {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+@keyframes icon-spin-back {
+  from { transform: rotate(0); }
+  to { transform: rotate(-360deg); }
+}
+
+/* Saat: akrep ve yelkovan bir tur atar, kadran yerinde. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-clock, .lucide-clock-3, .lucide-clock-4, .lucide-timer, .lucide-alarm-clock),
+svg:is(.lucide-clock, .lucide-clock-3, .lucide-clock-4):hover {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-clock, .lucide-clock-3, .lucide-clock-4) > :not(circle),
+svg:is(.lucide-clock, .lucide-clock-3, .lucide-clock-4):hover > :not(circle) {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: icon-spin 900ms var(--icon-out) both;
+}
+
+/* Kilit: halka kalkar, geri oturur. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-lock, .lucide-lock-keyhole, .lucide-lock-open),
+svg.lucide-lock:hover {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-lock, .lucide-lock-keyhole) > path:first-of-type,
+svg.lucide-lock:hover > path:first-of-type {
+  animation: icon-shackle 640ms var(--icon-spring) both;
+}
+@keyframes icon-shackle {
+  0% { transform: translateY(0); }
+  45% { transform: translateY(-2.5px); }
+  100% { transform: translateY(0); }
+}
+
+/* Oklar ve köşeli ayraçlar: gittiği yöne atılır, yayla döner. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-arrow-right, .lucide-chevron-right, .lucide-chevrons-right, .lucide-move-right, .lucide-arrow-big-right):not([class*='animate-']) {
+  animation: icon-nudge-x 560ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-arrow-left, .lucide-chevron-left, .lucide-chevrons-left, .lucide-move-left):not([class*='animate-']) {
+  animation: icon-nudge-x-back 560ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chevron-down, .lucide-arrow-down, .lucide-chevrons-down):not([class*='animate-']) {
+  animation: icon-nudge-y 560ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chevron-up, .lucide-arrow-up, .lucide-chevrons-up):not([class*='animate-']) {
+  animation: icon-nudge-y-back 560ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-arrow-up-right, .lucide-external-link, .lucide-send, .lucide-send-horizontal, .lucide-square-arrow-out-up-right):not([class*='animate-']) {
+  animation: icon-launch 620ms var(--icon-spring) both;
+}
+@keyframes icon-nudge-x {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+@keyframes icon-nudge-x-back {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+@keyframes icon-nudge-y {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(2.5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes icon-nudge-y-back {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-2.5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes icon-launch {
+  0% { transform: translate(0, 0); opacity: 1; }
+  38% { transform: translate(5px, -5px); opacity: 0; }
+  39% { transform: translate(-5px, 5px); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+
+/* Çift ok (seçim kutuları): uçlar açılıp kapanır. */
+:where(a, button, summary, label, [role='button'], [role='combobox'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-chevrons-up-down {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='combobox'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-chevrons-up-down > :first-child {
+  animation: icon-nudge-y 520ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='combobox'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-chevrons-up-down > :last-child {
+  animation: icon-nudge-y-back 520ms var(--icon-spring) both;
+}
+
+/* Artı / çarpı: çeyrek tur. Eksi: nefes. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-plus, .lucide-x, .lucide-circle-plus, .lucide-square-plus, .lucide-circle-x):not([class*='animate-']) {
+  animation: icon-turn 520ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-minus:not([class*='animate-']) {
+  animation: icon-breathe-x 480ms var(--icon-spring) both;
+}
+@keyframes icon-breathe-x {
+  0% { transform: scaleX(1); }
+  45% { transform: scaleX(0.6); }
+  100% { transform: scaleX(1); }
+}
+
+/* Göz: göz kırpar. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-eye, .lucide-eye-off, .lucide-scan-eye):not([class*='animate-']) {
+  animation: icon-blink 520ms var(--icon-out) both;
+}
+@keyframes icon-blink {
+  0%, 100% { transform: scaleY(1); }
+  35% { transform: scaleY(0.12); }
+  60% { transform: scaleY(1); }
+}
+
+/* Arama: büyüteç küçük bir daire çizer. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='combobox'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-search, .lucide-scan-search, .lucide-zoom-in):not([class*='animate-']),
+:where(label, div):focus-within > svg.lucide-search {
+  animation: icon-scan 760ms var(--icon-out) both;
+}
+@keyframes icon-scan {
+  0% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(-1.5px, -1px) rotate(-8deg); }
+  55% { transform: translate(1.5px, 1px) rotate(6deg); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
+/* Çöp kutusu: sallanıp oturur. */
+:where(a, button, summary, label, [role='button'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-trash, .lucide-trash2, .lucide-trash-2):not([class*='animate-']) {
+  transform-origin: 50% 90%;
+  animation: icon-wobble 560ms var(--icon-out) both;
+}
+@keyframes icon-wobble {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  55% { transform: rotate(9deg); }
+  80% { transform: rotate(-4deg); }
+}
+
+/* Kalem / düzenle / ataç / soru / mesaj: kısa bir kıpırtı. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-pencil, .lucide-pen, .lucide-pen-line, .lucide-square-pen, .lucide-file-pen, .lucide-file-pen-line, .lucide-file-edit, .lucide-paperclip, .lucide-circle-question-mark, .lucide-circle-help, .lucide-message-square, .lucide-message-circle, .lucide-messages-square, .lucide-smartphone, .lucide-hard-hat):not([class*='animate-']) {
+  animation: icon-wobble 560ms var(--icon-out) both;
+}
+
+/* Gelen kutusu / indir / paket / takvim / pano: aşağı-yukarı yaylanır. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-download, .lucide-inbox, .lucide-file-down, .lucide-arrow-down-to-line, .lucide-package, .lucide-package-check, .lucide-mail, .lucide-mail-plus):not([class*='animate-']) {
+  animation: icon-drop 600ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-upload, .lucide-file-up, .lucide-arrow-up-from-line, .lucide-clipboard-list, .lucide-clipboard-check, .lucide-calendar, .lucide-calendar-days, .lucide-user, .lucide-users, .lucide-user-plus, .lucide-store, .lucide-building, .lucide-building-2, .lucide-folder-tree, .lucide-folder-kanban, .lucide-folder, .lucide-folder-open, .lucide-printer, .lucide-shield, .lucide-shield-check):not([class*='animate-']) {
+  animation: icon-hop 600ms var(--icon-spring) both;
+}
+@keyframes icon-drop {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(2.5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes icon-hop {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-2.5px) scale(1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Çıkış: ok kapıdan dışarı kayar. */
+:where(a, button, summary, label, [role='button'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-log-out,
+:where(a, button, summary, label, [role='button'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg.lucide-log-in {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-log-out, .lucide-log-in) > :not(:last-child) {
+  animation: icon-nudge-x 560ms var(--icon-spring) both;
+}
+
+/* Panel aç/kapat: iç çizgi ve ok kayar. */
+:where(a, button, [role='button'], [data-icon-trigger]):is(:hover, :focus-visible) svg:is(.lucide-panel-left-open, .lucide-panel-left-close, .lucide-panel-left) {
+  animation: none;
+}
+:where(a, button, [role='button'], [data-icon-trigger]):is(:hover, :focus-visible) svg.lucide-panel-left-open > :last-child {
+  animation: icon-nudge-x 560ms var(--icon-spring) both;
+}
+:where(a, button, [role='button'], [data-icon-trigger]):is(:hover, :focus-visible) svg.lucide-panel-left-close > :last-child {
+  animation: icon-nudge-x-back 560ms var(--icon-spring) both;
+}
+
+/* Pano / ızgara: kareler sırayla nefes alır. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-layout-dashboard, .lucide-layout-grid, .lucide-grid-2x2, .lucide-layout-list),
+svg.lucide-layout-dashboard:hover {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-layout-dashboard, .lucide-layout-grid, .lucide-grid-2x2, .lucide-layout-list) > *,
+svg.lucide-layout-dashboard:hover > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 520ms var(--icon-spring) both;
+}
+:is(a, button, [role='button'], [role='tab'], [role='menuitem'], svg):is(:hover, :focus-visible) svg:is(.lucide-layout-dashboard, .lucide-layout-grid, .lucide-grid-2x2) > :nth-child(2),
+svg.lucide-layout-dashboard:hover > :nth-child(2) { animation-delay: 60ms; }
+:is(a, button, [role='button'], [role='tab'], [role='menuitem'], svg):is(:hover, :focus-visible) svg:is(.lucide-layout-dashboard, .lucide-layout-grid, .lucide-grid-2x2) > :nth-child(3),
+svg.lucide-layout-dashboard:hover > :nth-child(3) { animation-delay: 120ms; }
+:is(a, button, [role='button'], [role='tab'], [role='menuitem'], svg):is(:hover, :focus-visible) svg:is(.lucide-layout-dashboard, .lucide-layout-grid, .lucide-grid-2x2) > :nth-child(4),
+svg.lucide-layout-dashboard:hover > :nth-child(4) { animation-delay: 180ms; }
+@keyframes icon-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.7); }
+  100% { transform: scale(1); }
+}
+
+/* Çizelge: çubuklar tabandan sırayla yükselir. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chart-column, .lucide-bar-chart-3, .lucide-chart-bar, .lucide-chart-no-axes-column, .lucide-trending-up, .lucide-chart-line),
+svg.lucide-chart-column:hover {
+  animation: none;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chart-column, .lucide-bar-chart-3, .lucide-chart-no-axes-column) > :not(:first-child),
+svg.lucide-chart-column:hover > :not(:first-child) {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: icon-grow 620ms var(--icon-spring) both;
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chart-column, .lucide-bar-chart-3, .lucide-chart-no-axes-column) > :nth-child(3) { animation-delay: 70ms; }
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-chart-column, .lucide-bar-chart-3, .lucide-chart-no-axes-column) > :nth-child(4) { animation-delay: 140ms; }
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-trending-up, .lucide-chart-line) > * {
+  animation: icon-draw 700ms var(--icon-out) both;
+}
+@keyframes icon-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* Sepet: ileri yuvarlanır. Para: bozuk para gibi döner. Yıldız: döner ve büyür. */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-shopping-cart, .lucide-shopping-bag, .lucide-truck):not([class*='animate-']) {
+  animation: icon-roll 620ms var(--icon-spring) both;
+}
+@keyframes icon-roll {
+  0% { transform: translateX(0) rotate(0); }
+  35% { transform: translateX(3px) rotate(-6deg); }
+  100% { transform: translateX(0) rotate(0); }
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-circle-dollar-sign, .lucide-badge-dollar-sign, .lucide-coins, .lucide-banknote, .lucide-euro, .lucide-dollar-sign, .lucide-turkish-lira):not([class*='animate-']) {
+  animation: icon-flip 700ms var(--icon-out) both;
+}
+@keyframes icon-flip {
+  from { transform: perspective(60px) rotateY(0); }
+  to { transform: perspective(60px) rotateY(360deg); }
+}
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-star, .lucide-sparkles, .lucide-award):not([class*='animate-']) {
+  animation: icon-star 700ms var(--icon-spring) both;
+}
+@keyframes icon-star {
+  0% { transform: rotate(0) scale(1); }
+  50% { transform: rotate(72deg) scale(1.15); }
+  100% { transform: rotate(144deg) scale(1); }
+}
+
+/* Onay: tik baştan çizilir (varsayılan çizim, daha yavaş). */
+:where(a, button, summary, label, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [data-icon-trigger]):is(:hover, :focus-visible)
+  svg:is(.lucide-check, .lucide-circle-check, .lucide-circle-check-big, .lucide-check-circle, .lucide-check-circle-2, .lucide-badge-check, .lucide-check-check):not([class*='animate-']) {
+  animation: icon-draw 760ms var(--icon-out) both;
+}
+
+/* Eriştirilebilirlik: hareket azaltılınca ikonlar durur. */
+@media (prefers-reduced-motion: reduce) {
+  svg.lucide,
+  svg.lucide > * {
+    animation: none !important;
+  }
+}

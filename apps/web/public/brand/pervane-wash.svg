@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" preserveAspectRatio="xMaxYMin slice">
+  <!-- Pervane deseni (Uğur Promilling kılavuzu, Barmaksan): çapraz değirmen kanatları; sağ üst köşeden sola ve aşağı söner.
+       Her sütun kendi deseninde, kanat karonun tam içinde: karo sınırında kesilen kanat parçası (dikiş izi) kalmaz.
+       slice: dar panelde kutuya sığdırıp üstten boşluk bırakmak yerine sağ üste yaslanıp soldan kırpılır. -->
+  <defs>
+    <pattern id="a" width="128" height="176" patternUnits="userSpaceOnUse" patternTransform="rotate(-40) scale(1.5)">
+      <g fill="none" stroke="#d9b625" stroke-linecap="square" transform="translate(12 18)">
+        <rect width="40" height="140" stroke-width="5"/>
+        <path d="M20 0V140M0 28H40M0 56H40M0 84H40M0 112H40" stroke-width="3.5"/>
+      </g>
+    </pattern>
+    <pattern id="b" y="88" width="128" height="176" patternUnits="userSpaceOnUse" patternTransform="rotate(-40) scale(1.5)">
+      <g fill="none" stroke="#d9b625" stroke-linecap="square" transform="translate(76 18)">
+        <rect width="40" height="140" stroke-width="5"/>
+        <path d="M20 0V140M0 28H40M0 56H40M0 84H40M0 112H40" stroke-width="3.5"/>
+      </g>
+    </pattern>
+    <radialGradient id="g" cx="1" cy="0" r="1.12">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="0.38" stop-color="#fff" stop-opacity="0.45"/>
+      <stop offset="0.72" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="m">
+      <rect width="760" height="420" fill="url(#g)"/>
+    </mask>
+  </defs>
+  <g mask="url(#m)" opacity="0.13">
+    <rect width="760" height="420" fill="url(#a)"/>
+    <rect width="760" height="420" fill="url(#b)"/>
+  </g>
+</svg>

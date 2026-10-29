@@ -1,0 +1,9 @@
+[Unit]
+Description=UP-SatinAlim test sunucusu: GitHub'dan güncelleme çek
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/up-satinalim/update.sh
+Nice=10

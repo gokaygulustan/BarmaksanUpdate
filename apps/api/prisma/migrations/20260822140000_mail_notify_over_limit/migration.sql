@@ -1,0 +1,1 @@
+ALTER TABLE "mail_settings" ADD COLUMN IF NOT EXISTS "notifyOverLimit" BOOLEAN NOT NULL DEFAULT true;

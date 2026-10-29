@@ -1,0 +1,1055 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  /// cPanel thread limiti: Node-API library motoru app açılışında Tokio thread açarken çökebiliyor.
+  engineType    = "binary"
+  /// `native` = generate çalıştığınız makine; `rhel-openssl-3.0.x` = EL9 / Alma / Rocky (OpenSSL 3) sunucu.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  PURCHASING
+  SUPPLIER
+  DEPARTMENT
+}
+
+enum DepartmentCollarType {
+  WHITE_COLLAR
+  BLUE_COLLAR
+}
+
+enum RequestStatus {
+  DRAFT
+  SENT_TO_VENDOR
+  VENDOR_QUOTED
+  PENDING_MANAGER_APPROVAL
+  PENDING_ADMIN_APPROVAL
+  RETURNED_TO_MANAGER
+  APPROVED_FOR_PURCHASE
+  VENDOR_APPROVED
+  IN_PRODUCTION
+  HAS_ISSUES
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(PURCHASING)
+  moduleId  String   @default("URETIM_PLANLAMA") // URETIM_PLANLAMA | SATIN_ALMA
+  subRole   String   @default("STAFF") // MANAGER | STAFF | DIRECTOR | WAREHOUSE
+  /// Üst yönetim: tedarikçi kanalı (mail/SMS/token) ve SMTP. ADMIN seed true.
+  isExecutive Boolean @default(false)
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor                      Vendor?
+  comments                    Comment[]
+  notifications               Notification[]
+  passwordResetToken          PasswordResetToken?
+  procurementRequests         ProcurementRequest[] @relation("CreatedBy")
+  assignedProcurementRequests ProcurementRequest[] @relation("AssignedTo")
+  itemVendorPicks             RequestItemVendorPick[]
+  decisionInvitesCreated      ProcurementDecisionInvite[] @relation("DecisionInvitesCreated")
+  approvalHistories           ProcurementApprovalHistory[]
+  auditEvents                 AuditEvent[]
+  internalRequestsCreated     InternalRequest[]            @relation("InternalCreatedBy")
+  internalRequestsReviewed    InternalRequest[]            @relation("InternalReviewedBy")
+  internalRequestsAssigned    InternalRequest[]            @relation("InternalAssignedTo")
+  internalRequestAssigneeLinks InternalRequestAssignee[]
+  internalRequestMessages     InternalRequestMessage[]
+  internalRequestMessageReads InternalRequestMessageRead[]
+  marketSourcesCreated        RequestMarketSource[] @relation("MarketSourcesCreated")
+  handoversInitiated          ProcurementHandover[] @relation("HandoverInitiated")
+  handoversDecided            ProcurementHandover[] @relation("HandoverDecided")
+
+  @@map("users")
+}
+
+model Vendor {
+  id           String   @id @default(cuid())
+  name         String
+  contactName  String?  // Yetkili Ad Soyad
+  contactEmail String
+  // Teklif/talep bildirimleri: ana contactEmail ile birlikte, tekrarsız tüm bu adreslere gider.
+  extraContactEmails String[] @default([])
+
+  contactPhone String?
+  /// Ana numara dışındaki cep / sabit hat / dahili
+  extraContactPhones String[] @default([])
+  taxId        String?
+  city         String?  // Şehir
+  district     String?  // İlçe
+  address      String?  // Tam adres
+  /// Ne sattığı: MOTOR, REDÜKTÖR, PASLANMAZ SAC … (arama ve filtre)
+  categories   String[] @default([])
+  /// Satın alma ekibinin firma hakkındaki notu (aranabilir)
+  notes        String?
+  /// "Excel toplu liste" gibi içe aktarma kaynağı
+  importSource String?
+  importedAt   DateTime?
+  moduleId     String   @default("URETIM_PLANLAMA") // URETIM_PLANLAMA | SATIN_ALMA
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignments RequestVendorAssignment[]
+  itemQuotes  RequestItemQuote[]
+  products    Product[] // Tedarikçiye ait ürün kataloğu
+  receivedComments Comment[]
+  catalogs    VendorCatalog[] // PDF kataloglar
+  activityLogs VendorActivityLog[]
+  itemVendorPicks RequestItemVendorPick[]
+  /// Talep / teklif sürecinde bu tedarikçinin yüklediği ekler
+  procurementAttachments Attachment[]
+  /// Şirket içi kullanıcı e-posta/telefonu ile çakışıyor
+  flaggedInternalOverlap Boolean @default(false)
+  auditEvents            AuditEvent[]
+  priceSnapshots         ProductPriceSnapshot[]
+  contacts               VendorContact[]
+
+  @@map("vendors")
+}
+
+/// Firmadaki yetkili kişiler. Aynı firmanın birden çok kişisi burada durur;
+/// bildirim adresleri Vendor.contactEmail / extraContactEmails üzerinden gider.
+model VendorContact {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name      String?
+  title     String?  // Görev / departman (örn. muhasebe)
+  email     String?
+  phone     String?
+  notes     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId])
+  @@map("vendor_contacts")
+}
+
+model VendorCatalog {
+  id           String   @id @default(cuid())
+  originalName String   // Orijinal dosya adı
+  filePath     String   // Sunucudaki yol
+  fileSize     Int      // Byte cinsinden boyut
+  createdAt    DateTime @default(now())
+
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_catalogs")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String?
+  unit        String   @default("Adet") // Adet, m, m2, kg vb.
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  requestItems RequestItem[]
+
+  @@map("products")
+}
+
+model ProcurementRequest {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      RequestStatus @default(DRAFT)
+  moduleId    String        @default("URETIM_PLANLAMA") // URETIM_PLANLAMA | SATIN_ALMA
+  /// Doluysa satın alma bu birimin sorumluluğundadır. Kaynak departman moduleId'de kalır.
+  purchasingResponsibleModuleId String?
+  deadline    DateTime?
+  /// Satın alma tamamlandıktan sonra fatura yüklendiğinde dolar.
+  invoiceUploadedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  visibleColumns    String[]      @default(["productName", "quantity", "unit"])
+  quoteVatIncluded  Boolean?
+  quoteVatRate      Float?
+  quoteHasMaturity  Boolean?
+  quoteMaturityDays Int?
+
+  /// Mavi yaka kaynaklı RFQ: birim (opsiyonel)
+  shopDepartmentId String?
+  shopDepartment   Department? @relation("ShopDepartmentRequests", fields: [shopDepartmentId], references: [id], onDelete: SetNull)
+  /// Mavi yaka kaynaklı RFQ: usta/çalışan (opsiyonel)
+  shopWorkerId String?
+  shopWorker   OrgWorker? @relation(fields: [shopWorkerId], references: [id], onDelete: SetNull)
+  /// Yalnız Satın Alma iç notu — tedarikçiye sızmamalı
+  internalNote String?
+  /// Birimin malı istediği tarih (aciliyet). Teklif toplama süresi (deadline) değil.
+  neededBy DateTime?
+  /// Eski kayıtlar: tek ortalama nakliye. Yeni gönderimde assignment.shippingCostTRY kullanılır.
+  avgShippingCostTRY Float?
+  /// Yalnız üretim taleplerinde dolu; projesiz seçimde birimin "Genel" projesine bağlanır.
+  projectId String?
+  project   ProcurementProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  /// COMPLETED anında kilitlenen TCMB kurları (1 USD/EUR/CHF = ? TRY). Canlı kur artık kullanılmaz.
+  fxRatesJson   Json?
+  fxSource      String?
+  fxFetchedAt   DateTime?
+  fxFrozenAt    DateTime?
+
+  assignments RequestVendorAssignment[]
+  items       RequestItem[]
+  attachments Attachment[]
+  comments    Comment[]
+  vendorActivityLogs VendorActivityLog[]
+  itemVendorPicks    RequestItemVendorPick[]
+  decisionInvites    ProcurementDecisionInvite[]
+  executiveInboxCopies ExecutiveInboxCopy[]
+  approvalHistories  ProcurementApprovalHistory[]
+  auditEvents        AuditEvent[]
+  priceSnapshots     ProductPriceSnapshot[]
+  /// Birim talebinden açılan tedarik talebi. Bir fiş birden çok tedarik talebine bölünebilir.
+  internalRequestId String?
+  sourceInternalRequest InternalRequest? @relation("SourceInternalRequest", fields: [internalRequestId], references: [id], onDelete: SetNull)
+  coveredInternalItems InternalRequestItem[]
+  marketSources      RequestMarketSource[]
+
+  @@index([shopDepartmentId])
+  handovers          ProcurementHandover[]
+  @@index([internalRequestId])
+  @@index([shopWorkerId])
+  @@index([projectId])
+  @@map("procurement_requests")
+}
+
+/// Tedarikçi taleplerini gruplayan proje (ör. 26336 Moritanya). Birim bazında ayrışır.
+model ProcurementProject {
+  id          String   @id @default(cuid())
+  moduleId    String   @default("URETIM_PLANLAMA")
+  code        String?
+  name        String
+  /// Birim başına tek varsayılan proje ("Genel"); kapatılamaz ve silinemez.
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requests ProcurementRequest[]
+
+  @@unique([moduleId, code])
+  @@index([moduleId, isActive])
+  @@map("procurement_projects")
+}
+
+/// Departmanlar arası satın alma devri. moduleId kaynak departmanda kalır.
+model ProcurementHandover {
+  id            String    @id @default(cuid())
+  requestId     String
+  request       ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  initiatedById String
+  initiatedBy   User      @relation("HandoverInitiated", fields: [initiatedById], references: [id])
+  /// TAKEOVER: Satın Alma devralmayı ister. HANDOFF: kaynak departman devretmeyi ister.
+  direction     String
+  fromModuleId  String
+  toModuleId    String
+  /// PENDING | ACCEPTED | REJECTED
+  status        String    @default("PENDING")
+  note          String?
+  decisionNote  String?
+  decidedById   String?
+  decidedBy     User?     @relation("HandoverDecided", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([requestId, createdAt])
+  @@map("procurement_handovers")
+}
+
+/// Yönetim panelinden yüklenen Excel talep listesi şablonu.
+/// id = moduleId (URETIM_PLANLAMA | SATIN_ALMA | BIRIM_TALEP). Eski singleton satırı üretime taşındı.
+model ProcurementListTemplate {
+  id           String   @id
+  originalName String
+  storedPath   String
+  mimeType     String   @default("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+  size         Int
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@map("procurement_list_templates")
+}
+
+/// "Excel ile toplu kalem" kartının modül bazında açık/kapalı durumu (yalnız ADMIN değiştirir).
+/// id = moduleId (SATIN_ALMA / URETIM_PLANLAMA); kayıt yoksa açık sayılır.
+model ProcurementExcelImportSetting {
+  id        String   @id
+  isEnabled Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("procurement_excel_import_settings")
+}
+
+// Teklif/talep bildiriminde CC olarak seçilebilecek kişiler; listeyi yalnız ADMIN yönetir.
+model ProcurementNotificationCcContact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("procurement_notification_cc_contacts")
+}
+
+model RequestItem {
+  id          String   @id @default(cuid())
+  serialNumber      String?  @db.VarChar(250) // SN — sadece sayı
+  stockCode         String?  @db.VarChar(250) // Stok Kodu
+  tonnageInfo       String?  @db.VarChar(250) // Tonaj Bilgisi
+  productName String
+  quantity          Float    @default(0) // Int -> Float to support decimals if needed
+  unit              String   @default("Adet") // Adet, Kg, Metre vs.
+  secondaryQuantity Float?   // Seçmeli İkincil miktar (örn: 500)
+  secondaryUnit     String?  // Seçmeli İkincil birim (örn: kg)
+  notes             String?  // Alıcı notu (Açıklama / Ürün Detayları)
+  category          String?  // Ürün kategorisi / grubu
+  sortOrder         Int      @default(0) // Excel / form satır sırası
+  hasIssue    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  productId String? // Katalogdan seçilen ürünle bağlantı
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  quotes    RequestItemQuote[]
+  vendorPick RequestItemVendorPick?
+  attachments Attachment[]
+  marketQuotes RequestMarketQuote[]
+  invoiceLinks InvoiceItem[]
+
+  @@map("request_items")
+}
+
+/// Fatura (kind=INVOICE ek) ↔ kalem. Bir fatura birden çok kalemi, bir kalem birden çok faturayı kapsayabilir.
+model InvoiceItem {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+
+  attachmentId String
+  attachment   Attachment  @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  itemId       String
+  item         RequestItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([attachmentId, itemId])
+  @@index([itemId])
+  @@map("invoice_items")
+}
+
+model RequestVendorAssignment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  quoteToken   String?   @unique // Dışarıdan girişsiz erişim için tekil token
+  /// SMS için kısa yol (/q/:code); uzun quoteToken e-postada kalır
+  quoteShortCode String?  @unique
+  tokenExpires DateTime? // Token geçerlilik süresi
+
+  overallDiscountRate Float? @default(0) // Toplam teklif bazında iskonto yüzdesi
+
+  isShippingIncluded Boolean? @default(true) // Nakliye dahil mi (Evet/Hayır)
+  /// Personelin yetkiliye iletirken girdiği cari nakliye bedeli (TRY). Yalnız nakliye hariç teklifte dolu.
+  shippingCostTRY    Float?
+  isVatIncluded      Boolean? @default(false) // Eski alan; SATIN_ALMA’da KDV kalem bazlı
+  vatRate            Float?   @default(20)
+  hasMaturity        Boolean? @default(false)// Vade mevcut mu (Evet/Hayır)
+  maturityDays       Int?                    // Vade gün sayısı
+  /// Tedarikçi döviz kurunu sabitlediyse true; usdRate/eurRate/chfRate = 1 birim kaç TRY
+  usdRateFixed       Boolean? @default(false)
+  usdRate            Float?
+  eurRate            Float?
+  chfRate            Float?
+  quoteNote          String?
+
+  @@unique([requestId, vendorId])
+  @@map("request_vendor_assignments")
+}
+
+model RequestItemQuote {
+  id        String   @id @default(cuid())
+  price     Float
+  currency  String   @default("TRY") // TRY, USD, EUR, CHF
+  notes     String?
+  discountRate Float? @default(0) // Ürün bazında iskonto oranı (%)
+  vatRate      Float? // SATIN_ALMA kalem KDV % (1 / 10 / 20); üretimde null
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemId    String
+  item      RequestItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  vendorId  String
+  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, vendorId])
+  @@map("request_item_quotes")
+}
+
+/// Yönetici satın alma kararı: kalem bazında seçilen tedarikçi (null = bilinçli atlama).
+model RequestItemVendorPick {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  requestId      String
+  request        ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  itemId         String         @unique
+  item           RequestItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  chosenVendorId String?
+  vendor         Vendor? @relation(fields: [chosenVendorId], references: [id], onDelete: SetNull)
+
+  chosenMarketSourceId String?
+  marketSource         RequestMarketSource? @relation(fields: [chosenMarketSourceId], references: [id], onDelete: SetNull)
+
+  pickedByUserId String
+  pickedBy       User @relation(fields: [pickedByUserId], references: [id])
+
+  @@unique([requestId, itemId])
+  @@index([chosenMarketSourceId])
+  @@map("request_item_vendor_picks")
+}
+
+/// Giriş yapmadan satın alma kararı için tek kullanımlık davet bağlantısı (e-posta ile gönderilir).
+model ProcurementDecisionInvite {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  /// Yöneticiye e-postanın gerçekten iletildiği an; null ise 1 dk. iptal penceresi içinde henüz gönderilmemiştir.
+  emailSentAt DateTime?
+  /// Üst yönetim kutusu Onayla/Reddet ile kapandı; teklif kilidi kalkar, kuyruktan düşer.
+  resolvedAt DateTime?
+  /// Yönetici CC listesinden seçilen ek kopya alıcılar (üst yönetim e-postası her zaman gider).
+  extraEmails String[] @default([])
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  createdById String?
+  createdBy   User? @relation("DecisionInvitesCreated", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@map("procurement_decision_invites")
+}
+
+/// Üst yönetim kutusuna ek kopya: executiveEmail dışındaki alıcılar yalnız bu talepleri görür.
+/// executiveEmail (ör. mbarlik) her bekleyen talebe erişir.
+model ExecutiveInboxCopy {
+  id        String   @id @default(cuid())
+  email     String
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, email])
+  @@index([email])
+  @@map("executive_inbox_copies")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  /// GENERAL | INVOICE
+  kind         String   @default("GENERAL")
+  createdAt    DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  /// null = satın alma / genel; dolu = tedarikçi (cari) kapsamı
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  /// null = tüm talep veya tüm cari teklifi; dolu = yalnız bu kalem
+  itemId String?
+  item   RequestItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  /// Online piyasa sütunu (Trendyol vb.) — gerçek cari değil
+  marketSourceId String?
+  marketSource   RequestMarketSource? @relation(fields: [marketSourceId], references: [id], onDelete: Cascade)
+
+  invoiceItems InvoiceItem[]
+
+  @@index([vendorId])
+  @@index([itemId])
+  @@index([marketSourceId])
+  @@index([requestId, kind])
+  @@map("attachments")
+}
+
+/// Talep bazlı online piyasa sütunu (cari kartı açılmaz).
+model RequestMarketSource {
+  id         String   @id @default(cuid())
+  /// TRENDYOL | HEPSIBURADA | N11 | AMAZON | OTHER
+  channel    String
+  sellerName String
+  url        String
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("MarketSourcesCreated", fields: [createdById], references: [id])
+
+  quotes      RequestMarketQuote[]
+  attachments Attachment[]
+  itemPicks   RequestItemVendorPick[]
+
+  @@index([requestId])
+  @@map("request_market_sources")
+}
+
+/// Online sütundaki kalem fiyatı (RequestItemQuote / Vendor FK yok).
+model RequestMarketQuote {
+  id        String   @id @default(cuid())
+  price     Float
+  currency  String   @default("TRY") // TRY, USD, EUR, CHF
+  url       String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sourceId String
+  source   RequestMarketSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   RequestItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, itemId])
+  @@index([itemId])
+  @@map("request_market_quotes")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+
+  targetVendorId String?
+  targetVendor   Vendor? @relation(fields: [targetVendorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  kind      String   @default("ALERT") // ALERT | MESSAGE
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, isRead])
+  @@map("notifications")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model VendorActivityLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g., "VIEW", "SUBMIT"
+  message   String   // User-friendly message
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  vendorId  String
+  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_activity_logs")
+}
+
+/// Tek satır SMTP ayarları (UI’den yönetilir; env ile birleştirilir).
+model MailSettings {
+  id   String @id @default("default")
+  host String @default("smtp.gmail.com")
+  port Int    @default(587)
+  /// true: doğrudan SSL/TLS (genelde 465); false: STARTTLS veya düz (587)
+  secure Boolean @default(false)
+
+  user String?
+  pass String?
+
+  fromEmail String?
+  fromName  String?
+
+  /// Geriye dönük: tüm kanallar kapalıysa false sayılır (UI’de ana anahtar yok).
+  notificationsEnabled Boolean @default(true)
+
+  /// Tedarikçiye fiyat teklif talebi / form bağlantısı
+  notifyVendorQuote Boolean @default(true)
+  /// Tedarikçi teklif girince satın almaya haber
+  notifyQuoteReceived Boolean @default(true)
+  /// Yetkili onayına gönderme, onay/iade (personel ↔ yetkili)
+  notifyApproval Boolean @default(true)
+  /// Limit aşımı — üye olmayan üst yönetici onay kutusu
+  notifyOverLimit Boolean @default(true)
+  /// Depo mal kabul / irsaliye listesi
+  notifyWarehouse Boolean @default(true)
+  /// Birim satın alma talebi
+  notifyDepartment Boolean @default(true)
+  /// İç talep yazışması — yeni mesaj
+  notifyChat Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mail_settings")
+}
+
+/// Dinamik birim tanımları (Adet, Kg, Paket vb.)
+model Unit {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isSystem  Boolean  @default(false) // true = varsayılan birim, silinemez
+  createdAt DateTime @default(now())
+
+  @@map("units")
+}
+
+/// Organizasyon birimleri (beyaz yaka talep birimleri + mavi yaka üretim/depo birimleri).
+model Department {
+  id         String               @id @default(cuid())
+  name       String               @unique
+  sortOrder  Int                  @default(0)
+  collarType DepartmentCollarType @default(WHITE_COLLAR)
+  isActive   Boolean              @default(true)
+  createdAt  DateTime             @default(now())
+
+  workers              OrgWorker[]
+  shopProcurementRequests ProcurementRequest[] @relation("ShopDepartmentRequests")
+  shopInternalRequests    InternalRequest[]    @relation("ShopDepartmentInternalRequests")
+
+  @@index([collarType, isActive])
+  @@map("org_departments")
+}
+
+/// Mavi yaka usta/çalışan (login yok; SA adına takip için).
+model OrgWorker {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  phone        String?
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  procurementRequests ProcurementRequest[]
+  internalRequests    InternalRequest[]
+
+  @@index([departmentId, isActive])
+  @@index([lastName, firstName])
+  @@map("org_workers")
+}
+
+/// Satın alma parasal onay limiti ayarları
+model ProcurementApprovalLimit {
+  id          String   @id @default("singleton")
+  limitAmount Float    @default(250000)
+  isActive    Boolean  @default(true)
+  moduleId    String   @default("SATIN_ALMA")
+  /// Limit aşımında üye olmadan onay veren üst yönetici e-postası
+  executiveEmail String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("procurement_approval_limits")
+}
+
+/// Günlük üst yönetim onay kutusu erişim jetonu (üye girişi yok).
+/// Aynı gün + e-posta → aynı token; herhangi bir link tüm PENDING_ADMIN_APPROVAL kuyruğunu açar.
+model OverLimitApprovalToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  /// Europe/Istanbul takvim günü: YYYY-MM-DD
+  dayKey    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, dayKey])
+  @@index([token])
+  @@map("over_limit_approval_tokens")
+}
+
+/// Onay adımları ve işlem geçmişi (Audit log)
+model ProcurementApprovalHistory {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  /// Link ile onayda null olabilir
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  action      String   // SUBMIT_TO_MANAGER, MANAGER_APPROVE, ADMIN_APPROVE, ROUTE_TO_STAFF, REJECT, COMPLETE
+  targetUserId String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@map("procurement_approval_histories")
+}
+
+enum AuditSeverity {
+  INFO
+  ALERT
+}
+
+/// Personel / sistem denetim kaydı (token gövdesi yazılmaz).
+model AuditEvent {
+  id        String        @id @default(cuid())
+  action    String
+  severity  AuditSeverity @default(INFO)
+  payload   Json?
+  createdAt DateTime      @default(now())
+
+  actorUserId String?
+  actorUser   User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  requestId String?
+  request   ProcurementRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  internalRequestId String?
+  internalRequest   InternalRequest? @relation(fields: [internalRequestId], references: [id], onDelete: SetNull)
+
+  @@index([severity, createdAt])
+  @@index([actorUserId])
+  @@map("audit_events")
+}
+
+enum InternalRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+/// Birimlerin satın alma ekibinden mal istediği iç talep fişi (RFQ değil).
+model InternalRequest {
+  id          String                 @id @default(cuid())
+  title       String
+  description String?
+  /// Yalnız satın alma içi not; RFQ'da internalNote'a kopyalanır, tedarikçiye gitmez.
+  internalNote String?
+  /// Talep eden birimin adı (Kalite, Bakım…). Hedef her zaman satın alma.
+  requesterUnit String?
+  /// Mavi/beyaz yaka organizasyon birimi (pano filtresi + RFQ'ya kopyalanır).
+  shopDepartmentId String?
+  shopDepartment   Department? @relation("ShopDepartmentInternalRequests", fields: [shopDepartmentId], references: [id], onDelete: SetNull)
+  shopWorkerId String?
+  shopWorker   OrgWorker? @relation(fields: [shopWorkerId], references: [id], onDelete: SetNull)
+  status      InternalRequestStatus  @default(DRAFT)
+  moduleId    String                 @default("SATIN_ALMA")
+  reviewNote  String?
+  reviewedAt  DateTime?
+  /// Birimin malı istediği tarih — aciliyet. Tedarikçi teslim süresi değil.
+  neededBy    DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  createdById String
+  createdBy   User   @relation("InternalCreatedBy", fields: [createdById], references: [id])
+
+  reviewedById String?
+  reviewedBy   User?   @relation("InternalReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation("InternalAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  procurementRequests ProcurementRequest[] @relation("SourceInternalRequest")
+
+  items       InternalRequestItem[]
+  attachments InternalRequestAttachment[]
+  messages    InternalRequestMessage[]
+  assignees   InternalRequestAssignee[]
+  auditEvents AuditEvent[]
+
+  @@index([status, moduleId])
+  @@index([assignedToId])
+  @@index([shopDepartmentId])
+  @@index([shopWorkerId])
+  @@map("internal_requests")
+}
+
+model InternalRequestAssignee {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   InternalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, userId])
+  @@index([userId])
+  @@map("internal_request_assignees")
+}
+
+model InternalRequestItem {
+  id          String  @id @default(cuid())
+  productName String
+  quantity    Float   @default(0)
+  unit        String  @default("Adet")
+  notes       String?
+  stockCode   String? @db.VarChar(250)
+  sortOrder   Int     @default(0)
+
+  requestId String
+  request   InternalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  /// Bu kalemin alındığı tedarik talebi. Boşsa henüz ayrılmamıştır.
+  procurementRequestId String?
+  procurementRequest   ProcurementRequest? @relation(fields: [procurementRequestId], references: [id], onDelete: SetNull)
+
+  attachments InternalRequestAttachment[]
+
+  @@index([procurementRequestId])
+  @@map("internal_request_items")
+}
+
+model InternalRequestAttachment {
+  id           String   @id @default(cuid())
+  originalName String
+  storedPath   String
+  mimeType     String
+  size         Int
+  /// FILE: belge eki. INLINE: yazıya yapıştırılan görsel.
+  kind         String   @default("FILE")
+  createdAt    DateTime @default(now())
+
+  requestId String
+  request   InternalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  /// null = talep geneli ek; dolu = yalnız bu kalem
+  itemId String?
+  item   InternalRequestItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  messageId String?
+  message   InternalRequestMessage? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([itemId])
+  @@map("internal_request_attachments")
+}
+
+/// Birim ↔ satın alma canlı yazışması (RFQ Comment değil).
+model InternalRequestMessage {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  requestId String
+  request   InternalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  reads InternalRequestMessageRead[]
+  attachments InternalRequestAttachment[]
+
+  @@index([requestId, createdAt])
+  @@map("internal_request_messages")
+}
+
+model InternalRequestMessageRead {
+  id        String   @id @default(cuid())
+  readAt    DateTime @default(now())
+
+  messageId String
+  message   InternalRequestMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("internal_request_message_reads")
+}
+
+model EmailOtp {
+  id         String    @id @default(cuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@map("email_otps")
+}
+
+/// Tamamlanan / seçilen tekliften ürün fiyat anlığı.
+model ProductPriceSnapshot {
+  id          String   @id @default(cuid())
+  productName String
+  stockCode   String?
+  vendorName  String
+  unitPrice   Float
+  currency    String   @default("TRY")
+  unit        String?
+  quantity    Float?
+  source      String   @default("COMPLETED")
+  recordedAt  DateTime @default(now())
+
+  requestId String
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  itemId String?
+
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([productName, recordedAt])
+  @@index([stockCode])
+  @@map("product_price_snapshots")
+}
+
+/// NetGSM SMS ayarları (SMTP gibi tek satır; yalnız üst yönetim).
+model SmsSettings {
+  id        String   @id @default("default")
+  usercode  String?
+  password  String?
+  msgheader String?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sms_settings")
+}
+
+/// Sistem giden e-posta günlüğü (kanal kapalı / SMTP hatası dahil).
+model MailOutbox {
+  id          String   @id @default(cuid())
+  /// MAIL_CHANNEL değeri veya otp / smtp_test
+  channel     String?
+  status      String // SENT | SKIPPED | FAILED
+  skipReason  String?
+  to          String
+  cc          String?
+  bcc         String?
+  subject     String
+  htmlBody    String?  @db.Text
+  textBody    String?  @db.Text
+  plainSnippet String? @db.Text
+  messageId   String?
+  errorMessage String? @db.Text
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([channel])
+  @@map("mail_outbox")
+}
+
+
+/// Yerinde düzenleme (ADMIN): ekrandaki sabit yazıların üzerine yazılan hâli. Anahtar yazının varsayılanıdır.
+model SiteText {
+  key       String   @id
+  value     String
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+
+  @@map("site_texts")
+}
+
+model SiteTextHistory {
+  id        String   @id @default(cuid())
+  key       String
+  value     String?
+  author    String?
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@map("site_text_history")
+}

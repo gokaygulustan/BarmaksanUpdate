@@ -1,0 +1,11 @@
+[Unit]
+Description=UP-SatinAlim güncelleme yoklaması (dakikada bir)
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=5s
+Unit=up-satinalim-update.service
+
+[Install]
+WantedBy=timers.target

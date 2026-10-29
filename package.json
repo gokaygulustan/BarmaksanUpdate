@@ -1,0 +1,25 @@
+{
+  "name": "vendor-portal",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=apps/api\" \"npm run dev --workspace=apps/web\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "build:prod": "npm run db:generate --workspace=apps/api && npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "start:api": "npm run start --workspace=apps/api",
+    "start:prod": "npm run db:deploy --workspace=apps/api && node scripts/start-prod.mjs",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

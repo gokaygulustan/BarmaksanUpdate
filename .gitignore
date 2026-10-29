@@ -1,0 +1,38 @@
+# Bağımlılık ve derleme çıktıları
+node_modules
+.next
+**/.next
+**/.next-deploy
+*.tsbuildinfo
+apps/web/tsconfig.tsbuildinfo
+.prisma
+
+# Gizli bilgiler: ASLA depoya girmez (depo herkese açık)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+deploy-tester.local.txt
+
+# Yükleme dosyaları ve paketler
+uploads
+**/uploads
+deploy-portal-web
+deploy-portal-api
+*.zip
+*.rar
+*.tar.gz
+.rar
+.zip
+
+# Yedekler ve yerel araç klasörleri
+_yedek-*
+.claude
+.agent
+
+# Barındırma hesabına özel notlar
+Terminal Kodları.txt

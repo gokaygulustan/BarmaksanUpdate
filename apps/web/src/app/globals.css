@@ -1,0 +1,1854 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@300..700&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import './icon-motion.css';
+@import './status-glyph.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Barmaksan dili, koyu zeminde: hiyerarşi boyut, ağırlık ve boşlukla kurulur — renkle ve kutuyla değil.
+ * Ağırlıklar hafif kalır (700+ yok), büyük yazı sıkı, küçük yazı nefesli.
+ */
+@theme {
+  --font-weight-black: 640;
+  --font-weight-extrabold: 620;
+  --font-weight-bold: 590;
+  --font-weight-semibold: 550;
+  --font-weight-medium: 500;
+  --tracking-tighter: -0.035em;
+  --tracking-tight: -0.018em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.045em;
+  --tracking-widest: 0.08em;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-chrome: var(--chrome);
+  --color-hairline: var(--hairline);
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * ─── Mürekkep paleti (Barmaksan'ın koyu çerçevesi) ─────────────────────────
+ * Çerçeve (kenar çubuğu + üst bar) tek parça ve en koyu; içerik onun içinde biraz daha açık bir
+ * panel. Birincil eylem mürekkep: koyuda kırık beyaz dolgu, koyu yazı. Altın (#D9B625) yalnızca
+ * işaret: etkin menü çizgisi, marka. Dolgu, ışıma, gradient yok.
+ */
+:root {
+  color-scheme: dark;
+
+  --chrome: #0d0d0f;
+  --background: #141416;
+  --foreground: #f2f2ef;
+  --card: #19191c;
+  --card-foreground: #f2f2ef;
+  --popover: #1c1c1f;
+  --popover-foreground: #f2f2ef;
+  --primary: #d9b625;
+  --primary-foreground: #141416;
+  --secondary: #222226;
+  --secondary-foreground: #e6e6e2;
+  --muted: #1e1e21;
+  --muted-foreground: #8e8e94;
+  --accent: hsl(152, 46%, 42%);
+  --accent-foreground: #ffffff;
+  --destructive: #e5534b;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.085);
+  --hairline: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.11);
+  --ring: #d9b625;
+  --radius: 0.625rem;
+
+  --brand: #d9b625;
+  --brand-ink: #f0d55c;
+
+  --chart-1: #d9b625;
+  --chart-2: hsl(152, 46%, 46%);
+  --chart-3: #b4b4b8;
+  --chart-4: hsl(205, 40%, 58%);
+  --chart-5: #e5534b;
+
+  --sidebar: var(--chrome);
+  --sidebar-foreground: #f2f2ef;
+  --sidebar-primary: #d9b625;
+  --sidebar-primary-foreground: #141416;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #f0d55c;
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: #d9b625;
+
+  /* Hareket: kompozitörde, bekletmeyen. Yay ≈ bounce 0.25 (yalnızca momentumlu şeylerde). */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --shadow-float: 0 1px 1px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.38), 0 32px 80px rgba(0, 0, 0, 0.3);
+
+  /* Altın sızıntı eğrisi: ters smoothstep (1 − 3t² + 2t³). İki uçta da eğim sıfır, arada kırılma
+   * noktası yok; iki duraklı gradyanın ortasında göze çizgi gibi gelen eğim kırığı oluşmaz.
+   * Kullanım: linear-gradient(<yön>, var(--gold-ease-N)). N = tepe opaklığı (binde). */
+  --gold-ease-60:
+    rgba(217, 182, 37, 0.06), rgba(217, 182, 37, 0.0583) 10%, rgba(217, 182, 37, 0.0538) 20%,
+    rgba(217, 182, 37, 0.047) 30%, rgba(217, 182, 37, 0.0389) 40%, rgba(217, 182, 37, 0.03) 50%,
+    rgba(217, 182, 37, 0.0211) 60%, rgba(217, 182, 37, 0.013) 70%, rgba(217, 182, 37, 0.0062) 80%,
+    rgba(217, 182, 37, 0.0017) 90%, rgba(217, 182, 37, 0);
+  --gold-ease-100:
+    rgba(217, 182, 37, 0.1), rgba(217, 182, 37, 0.0972) 10%, rgba(217, 182, 37, 0.0896) 20%,
+    rgba(217, 182, 37, 0.0784) 30%, rgba(217, 182, 37, 0.0648) 40%, rgba(217, 182, 37, 0.05) 50%,
+    rgba(217, 182, 37, 0.0352) 60%, rgba(217, 182, 37, 0.0216) 70%, rgba(217, 182, 37, 0.0104) 80%,
+    rgba(217, 182, 37, 0.0028) 90%, rgba(217, 182, 37, 0);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.103 28.3%, 1.077 31.4%, 1.006 38.4%, 0.987 42.5%, 0.98 46.3%, 0.984 52%, 1.001 63.9%, 1.004 70.5%, 1);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(255, 255, 255, 0.24);
+    --hairline: rgba(255, 255, 255, 0.18);
+    --muted-foreground: #b4b4b8;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    font-variant-numeric: tabular-nums;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+  }
+  ::selection {
+    background: rgba(217, 182, 37, 0.32);
+    color: #fff;
+  }
+  :focus-visible {
+    outline-color: rgba(242, 242, 239, 0.55);
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+}
+
+/* ─── Custom Utilities ─────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Işıma yok: eski sınıflar yalnızca ince bir kenar bırakır. */
+  .gold-glow {
+    box-shadow: 0 0 0 1px rgba(217, 182, 37, 0.32);
+  }
+
+  .gold-glow-sm {
+    box-shadow: 0 0 0 1px rgba(217, 182, 37, 0.22);
+  }
+
+  /* Kart üzerine gelince 2px yükselir, kenar çizgisi belirginleşir; gölge yumuşak ve nötr. */
+  .card-hover {
+    transition:
+      transform 420ms var(--ease-spring),
+      border-color 200ms var(--ease-out),
+      box-shadow 260ms var(--ease-out);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  .card-hover:active {
+    transform: translateY(0) scale(0.995);
+    transition-duration: 120ms;
+  }
+
+  .sidebar-animate {
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  /** iOS: daha akıcı dikey kaydırma (VendorDecisionDeck vb.) */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hairline {
+    border-color: var(--hairline);
+  }
+}
+
+/*
+ * Renkli gölgeler ışıma gibi okunur: birincil renkten gelen tüm gölgeler nötr siyaha döner.
+ * (Sayfalarda shadow-primary/20 gibi sınıflar var; tek tek dokunmadan sakinleştirilir.)
+ */
+[class*='shadow-primary'] {
+  --tw-shadow-color: rgba(0, 0, 0, 0.35) !important;
+}
+[class*='blur-['][class*='rounded-full'][class*='bg-primary'],
+[class*='blur-3xl'][class*='rounded-full'][class*='bg-primary'],
+[class*='blur-2xl'][class*='rounded-full'][class*='bg-primary'] {
+  display: none;
+}
+
+[contenteditable][data-empty='true']:before {
+  content: attr(data-placeholder);
+  color: hsl(0 0% 62% / 0.55);
+  pointer-events: none;
+}
+
+/* ─── Scrollbar Styling ────────────────────────────────────────────────────────
+ * Katmanda (base): sayfalardaki kaydırma çubuğu sınıfları bunu ezebilsin. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.24);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
+/* ─── Hareket katmanı ──────────────────────────────────────────────────────────
+ * Yalnızca transform + opacity. Giriş kısa ve bekletmez; çocuklar 45 ms arayla sıraya girer.
+ * Animasyon bitince transform kalmaz (fill: backwards) — içerideki fixed katmanlar bozulmaz. */
+.page-enter {
+  animation: page-in 380ms var(--ease-out) backwards;
+}
+.stagger > * {
+  animation: rise-in 560ms var(--ease-out) backwards;
+}
+.stagger > *:nth-child(1) { animation-delay: 30ms; }
+.stagger > *:nth-child(2) { animation-delay: 75ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 165ms; }
+.stagger > *:nth-child(5) { animation-delay: 210ms; }
+.stagger > *:nth-child(6) { animation-delay: 255ms; }
+.stagger > *:nth-child(7) { animation-delay: 300ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 340ms; }
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Satır maskesi: yazı kendi çizgisinin altından yükselir (üst kapsayıcı overflow: clip). */
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+@keyframes slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/*
+ * Dalga dolgu (Barmaksan üst bar düğmeleri): üzerine gelince dolgu dalgalı üst kenarıyla aşağıdan
+ * yükselir, yükselirken bir kez yana akar; dolunca yazı/ikon tersine döner. Dolgu ::before'da.
+ */
+.wave-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.wave-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: -1;
+  height: calc(100% + 10px);
+  background: var(--wave-fill, #d9b625);
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 5Q10 0 20 5T40 5V10H0Z'/%3E%3C/svg%3E") 0 0 / 40px 10px repeat-x,
+    linear-gradient(#000, #000) 0 9px / 100% 100% no-repeat;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 5Q10 0 20 5T40 5V10H0Z'/%3E%3C/svg%3E") 0 0 / 40px 10px repeat-x,
+    linear-gradient(#000, #000) 0 9px / 100% 100% no-repeat;
+  transform: translateY(101%);
+  transition: transform 300ms var(--ease-out);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .wave-btn:hover {
+    color: var(--wave-ink, #141416) !important;
+    border-color: transparent !important;
+  }
+  .wave-btn:hover svg {
+    color: var(--wave-ink, #141416) !important;
+  }
+  .wave-btn:hover::before {
+    transform: translateY(-10px);
+    animation: wave-drift 300ms linear;
+  }
+}
+.wave-btn[data-open]::before {
+  transform: translateY(-10px);
+}
+.wave-btn[data-open] {
+  color: var(--wave-ink, #141416) !important;
+  border-color: transparent !important;
+}
+.wave-btn[data-open] svg {
+  color: var(--wave-ink, #141416) !important;
+}
+.wave-btn:active {
+  transform: scale(0.94);
+  transition: transform 120ms var(--ease-out);
+}
+@keyframes wave-drift {
+  from {
+    -webkit-mask-position: 0 0, 0 9px;
+    mask-position: 0 0, 0 9px;
+  }
+  to {
+    -webkit-mask-position: -40px 0, 0 9px;
+    mask-position: -40px 0, 0 9px;
+  }
+}
+
+/*
+ * Yazı yuvarlama: etiket yukarı kayıp çıkar, aynısı alttan gelir. Düğmede iki kopya:
+ * <span class="roll"><span>Metin</span><span aria-hidden>Metin</span></span>
+ */
+.roll {
+  position: relative;
+  display: inline-grid;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.roll > span {
+  grid-area: 1 / 1;
+  transition: transform 520ms var(--ease-out);
+}
+.roll > span:last-child {
+  transform: translateY(110%);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(button, a):hover > .roll > span:first-child,
+  :is(button, a):hover .roll > span:first-child {
+    transform: translateY(-110%);
+  }
+  :is(button, a):hover > .roll > span:last-child,
+  :is(button, a):hover .roll > span:last-child {
+    transform: translateY(0);
+  }
+}
+
+/* Rail ipucu ve grup paneli: tetikleyiciden (solda) doğar, öğeler arasında dikey kayar. */
+/* Yerinde düzenleme (EditMode.tsx): çerçeve ve kalem hızlıca belirir, panel öğeden doğar. */
+.edit-outline {
+  animation: fade-in 120ms ease-out backwards;
+}
+.edit-badge {
+  animation: flyout-in 160ms var(--ease-out) backwards;
+}
+.edit-pop {
+  animation: edit-pop-in 180ms var(--ease-out) backwards;
+}
+@keyframes edit-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+/* Tıklanmayan başlıkların (pointer-events-none) içindeki yazı da düzenleme modunda yakalanır. */
+html[data-editing] [data-edit-key] {
+  cursor: text;
+  pointer-events: auto;
+}
+
+/* Ölçek yok: ölçeklenen panelde yazı her karede yeniden çizilip titriyordu. Satırlar yalnızca solar;
+ * hareketi içlerindeki harfler yapar, iki ayrı kayma üst üste binmez. */
+.side-flyout {
+  transition: top 200ms var(--ease-out);
+  animation: flyout-in 170ms var(--ease-out) backwards;
+}
+.side-flyout-item {
+  animation: fade-in 160ms ease-out backwards;
+}
+/* Kapanış: rail'e doğru kayıp söner. Bu sırada tıklanmaz. */
+.side-flyout-out {
+  pointer-events: none;
+  animation: flyout-out 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes flyout-out {
+  to {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+@keyframes flyout-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+/* Kabuk ilk açılışta: rail soldan, üst bar yukarıdan, içerik paneli derinden gelir. */
+.shell-rail-in {
+  animation: slide-from-left 620ms var(--ease-out) backwards;
+}
+.shell-bar-in {
+  animation: drop-in 520ms var(--ease-out) 90ms backwards;
+}
+/* Panel girişi iki parça: zemin (gradyanlı page-surface) yalnızca solar, kayma + ölçek içerikte.
+ * Zemin transform altında rasterlenirse Chrome o anki karoları sonradan yeniden çizmez; sonradan
+ * çizilen karolarla gradyan titreşimi tutmaz ve karo sınırında yatay bir çizgi kalır. */
+.shell-panel-in {
+  animation: panel-fade 700ms var(--ease-out) 140ms backwards;
+}
+.shell-panel-rise {
+  animation: panel-rise 700ms var(--ease-out) 140ms backwards;
+}
+@keyframes panel-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes panel-rise {
+  from {
+    transform: translateY(18px) scale(0.985);
+  }
+}
+
+/* ─── Giriş ekranı ─────────────────────────────────────────────────────────────
+ * Fotoğraf derinden yaklaşıp yavaşça kayar; başlık satırları kendi çizgilerinin altından yükselir,
+ * form öğeleri sırayla gelir. */
+.login-photo {
+  transform-origin: 60% 40%;
+  animation:
+    login-photo-in 1600ms var(--ease-out) backwards,
+    login-drift 26s cubic-bezier(0.45, 0, 0.55, 1) 1600ms infinite alternate;
+}
+.login-brand {
+  animation: login-brand-in 900ms var(--ease-out) backwards;
+}
+.login-line {
+  animation: line-up 900ms var(--ease-out) backwards;
+}
+.login-fade-up {
+  animation: rise-in 700ms var(--ease-out) backwards;
+}
+.login-fade-down {
+  animation: drop-in 700ms var(--ease-out) 200ms backwards;
+}
+@keyframes login-photo-in {
+  from {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+@keyframes login-drift {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.1) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+@keyframes login-brand-in {
+  from {
+    clip-path: inset(6% 4% 6% 4% round 32px);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 24px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-photo,
+  .login-brand,
+  .login-line,
+  .login-fade-up,
+  .login-fade-down {
+    animation: fade-in 240ms ease backwards !important;
+  }
+}
+
+/* ─── Marka dokuları (Barmaksan) ───────────────────────────────────────────────
+ * Pervane deseni: iki katman, komşu kanat sütunları ters yönlerde gidip gelir. */
+.pervane-layers {
+  display: block;
+  overflow: hidden;
+}
+.pervane-layer {
+  position: absolute;
+  inset: calc(var(--bleed) * -1);
+  width: calc(100% + var(--bleed) * 2);
+  height: calc(100% + var(--bleed) * 2);
+  will-change: transform;
+}
+.pervane-forward,
+.pervane-backward {
+  animation: sail-travel 9s ease-in-out infinite alternate;
+}
+.pervane-backward {
+  animation-direction: alternate-reverse;
+}
+@keyframes sail-travel {
+  from {
+    transform: translate3d(calc(var(--tx) * -1), calc(var(--ty) * -1), 0);
+  }
+  to {
+    transform: translate3d(var(--tx), var(--ty), 0);
+  }
+}
+
+/*
+ * Sayfa sızıntısı (Barmaksan iç sayfaları): içerik panelinin üstünde altın ışık aşağı doğru söner;
+ * sağ üst köşeden pervane deseni sola ve aşağı kaybolur. Panelin kendi zemini — ayrı bir katman
+ * değil, z-index yok: sayfalardaki pencereler üst barın üstüne çıkmaya devam eder. Desen içerikle
+ * kayar; altın ışık panelin görünen boyunca (ekranın dibine kadar) söner, arada bitiş çizgisi kalmaz.
+ */
+.page-surface {
+  background:
+    url('/brand/pervane-wash.svg') right top / min(760px, 72%) 420px no-repeat local,
+    linear-gradient(180deg, var(--gold-ease-60)) left top / 100% 100% no-repeat scroll,
+    var(--background);
+}
+@media (max-width: 767px) {
+  .page-surface {
+    background:
+      url('/brand/pervane-wash.svg') right top / 100% 260px no-repeat local,
+      linear-gradient(180deg, var(--gold-ease-60)) left top / 100% 100% no-repeat scroll,
+      var(--background);
+  }
+}
+
+/* Kenar çubuğu dokusu: gizlilik şeridindeki altın değirmen ikonları (değirmen, başak, un, valsli,
+ * taş, silo); üstte belirgin, aşağı doğru söner ve çok yavaş kayar. */
+/* Kayma background-position ile değil translate ile: her karede yeniden boyama yok, kompozitörde
+ * akar. Bir desen boyu (330 px) solda fazladan durur; o kadar kayınca başa döner, dikiş görünmez. */
+.side-texture {
+  position: absolute;
+  inset: 0 0 auto -330px;
+  height: 420px;
+  pointer-events: none;
+  background: url('/brand/texture.png') repeat-x 0 0 / 330px 283px;
+  opacity: 0.2;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, rgba(0, 0, 0, 0.6) 62%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 30%, rgba(0, 0, 0, 0.6) 62%, transparent 100%);
+  animation: texture-drift 120s linear infinite;
+  /* Yalnızca imleç menüdeyken kayar: sürekli çalışan animasyon ekranı hiç dinlendirmiyordu
+   * (dizüstünde her karede birleştirme, pil ve takılma). */
+  animation-play-state: paused;
+  will-change: translate;
+}
+.side-nav:hover .side-texture {
+  animation-play-state: running;
+}
+.side-texture-bottom {
+  inset: auto 0 0 -330px;
+  height: 260px;
+  opacity: 0.15;
+  transform: scaleY(-1);
+  animation-direction: reverse;
+}
+@keyframes texture-drift {
+  to {
+    translate: 330px 0;
+  }
+}
+/* Bölümlü seçici: altın kapsül seçilen bölüme kayar. İçindeki koyu yazı kopyası ters yönde aynı
+ * eğriyle kayar; yazı rengi tam altının kapladığı yerde döner (iOS segment davranışı). */
+.seg-pill,
+.seg-pill-ink {
+  transition:
+    transform 380ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 380ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* Hover gölgesi: kenar çubuğundaki gölgeyle aynı süre ve eğri; imleci izleyip bölümden bölüme kayar. */
+.seg-ghost {
+  transition:
+    transform 150ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    width 150ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 150ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* Yükleme iskeleti: sönük blok + yavaş ışık süpürmesi. Süpürme ::after'ın transform'uyla (kompozitörde),
+ * blok sırasına göre (--i) küçük gecikmeyle dalga gibi akar. Parlama/gölge yok. */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.055);
+  border-radius: 10px;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.075), transparent);
+  animation: skel-sweep 1.7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  animation-delay: calc(var(--i, 0) * 90ms);
+  will-change: transform;
+}
+@keyframes skel-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+/* Veri gelince: içerik solarak belirir, iskelet üstte solarak çıkar (yalnızca opacity). */
+.skel-in {
+  animation: skel-in 460ms var(--ease-out) both;
+}
+.skel-out {
+  animation: skel-out 300ms ease-out both;
+}
+@keyframes skel-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes skel-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel::after {
+    animation: none;
+    display: none;
+  }
+  .skel-in {
+    animation-duration: 160ms;
+  }
+  .skel-out {
+    animation-duration: 120ms;
+  }
+}
+
+/* Açılır menü: tetikleyicisinden (sağ üst) doğar. */
+.status-menu {
+  transform-origin: top right;
+  animation: menu-in 180ms var(--ease-out);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg-pill,
+  .seg-pill-ink {
+    transition: none;
+  }
+  .seg-ghost {
+    transition: opacity 150ms ease;
+  }
+  .status-menu {
+    animation: fade-in 120ms ease;
+  }
+}
+
+/* Aynı doku üst çubukta: sabit (kayma yok, kendi katmanı yok). Çubuğun yığın bağlamında z -1: zeminin
+ * üstünde, yazı ve düğmelerin arkasında. */
+.bar-texture {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('/brand/texture.png') repeat-x 0 0 / 330px 283px;
+  opacity: 0.2;
+}
+
+/* Aynı doku özet kutularında: başlığın arkasında soluk (okunurluk), sağa doğru belirginleşir; desen
+ * kendi içinde aşağı doğru söner. Kenar çubuğundaki gibi yalnızca imleç kutudayken yavaşça kayar. */
+.tile-texture {
+  position: absolute;
+  inset: 0 0 auto -330px;
+  height: 283px;
+  pointer-events: none;
+  background: url('/brand/texture.png') repeat-x 0 0 / 330px 283px;
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.75) 45%, #000 80%);
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.75) 45%, #000 80%);
+  animation: texture-drift 120s linear infinite;
+  animation-play-state: paused;
+  will-change: translate;
+}
+.tile-texture-bottom {
+  inset: auto 0 0 -330px;
+  height: 220px;
+  opacity: 0.14;
+  transform: scaleY(-1);
+  animation-direction: reverse;
+}
+.texture-host:hover .tile-texture {
+  animation-play-state: running;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile-texture {
+    animation: none;
+  }
+}
+
+/* Ürün turu: vurgu çerçevesi ve kart adımdan adıma akar (konum, boyut, köşe); metin ilerlerken sağdan,
+ * geri giderken soldan netleşerek gelir. Tek eğri: hızlı kalkar, yumuşak oturur, sekmez. */
+.tour-morph {
+  transition-property: top, left, width, height, border-radius;
+  transition-duration: 560ms;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+.tour-fade {
+  animation: tour-fade 260ms ease both;
+}
+.tour-step-next {
+  animation: tour-in-next 440ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.tour-step-prev {
+  animation: tour-in-prev 440ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes tour-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes tour-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+    filter: blur(6px);
+  }
+}
+@keyframes tour-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+    filter: blur(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-morph {
+    transition-duration: 1ms;
+  }
+  .tour-step-next,
+  .tour-step-prev {
+    animation: tour-fade 160ms ease both;
+  }
+}
+
+/* Duman yazı (SmokeText): yeni harfler aşağıdan bulanıklıktan netleşir, eskileri yukarı dağılarak söner.
+ * Harf gecikmesi = sıra × adım; ilk harf 90 ms bekler. .fx-rise aynı hareketin bütün blok için olanıdır. */
+.fx-text {
+  display: inline;
+}
+.fx-text.center {
+  display: inline-block;
+}
+.fx-visual {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+/* Kelime bölünmez; maske yok: harfler görünür bir çizginin altından değil, boşluktan belirerek gelir. */
+.fx-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+/* Titremesin: harf hareketin başından sonuna aynı katmanda kalır (will-change kalıcı). Katmandan çıkan harf
+ * son karede tarayıcıca yeniden çizilip yarım piksel sıçrıyordu; harfler ayrı anlarda oturduğu için bu,
+ * yazının titreyerek yerleşmesi gibi görünüyordu. Bulanıklık hareketin ortasında biter, son kare keskin ve sabit. */
+.fx-letter {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+.fx-letter.in {
+  animation:
+    fx-letter-in 620ms cubic-bezier(0.22, 1, 0.36, 1) backwards,
+    fx-letter-in-blur 340ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--index) * var(--step) + 90ms);
+}
+.fx-letter.out {
+  animation:
+    fx-letter-out 520ms cubic-bezier(0.4, 0, 0.8, 0.4) both,
+    fx-letter-out-blur 520ms cubic-bezier(0.4, 0, 0.8, 0.4) both;
+  animation-delay: calc(var(--index) * var(--step) * 0.6);
+}
+/* Hızlı mod (rail panelleri): bekleme yok, bulanıklık yok, ~0.7 sn'de biter. Küçük punto bulanıklıkla titriyordu. */
+.fx-text.quick .fx-letter.in {
+  animation: fx-letter-in 440ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--index) * var(--step));
+}
+.fx-text.quick .fx-letter.out {
+  animation: fx-letter-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+.fx-old {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fx-text.center .fx-old {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.fx-screen-reader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.fx-rise {
+  /* Harflerle aynı sebep: blok da hareket bitince katmandan çıkıp sıçramasın. */
+  will-change: transform, opacity, filter;
+  transform: translateZ(0);
+  animation:
+    fx-rise-in 700ms cubic-bezier(0.23, 1, 0.32, 1) 180ms backwards,
+    fx-rise-blur 385ms cubic-bezier(0.23, 1, 0.32, 1) 180ms backwards;
+}
+/* Son kare her zaman translateZ(0) ve blur(0): katman değişmez, harf olduğu yerde kalır. */
+@keyframes fx-letter-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0.55em, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateZ(0);
+  }
+}
+@keyframes fx-letter-in-blur {
+  0% {
+    filter: blur(6px);
+  }
+  100% {
+    filter: blur(0);
+  }
+}
+@keyframes fx-letter-out {
+  75% {
+    opacity: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -0.5em, 0);
+  }
+}
+@keyframes fx-letter-out-blur {
+  to {
+    filter: blur(6px);
+  }
+}
+@keyframes fx-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(0);
+  }
+}
+@keyframes fx-rise-blur {
+  from {
+    filter: blur(10px);
+  }
+  to {
+    filter: blur(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-letter,
+  .fx-rise {
+    animation: none !important;
+  }
+  .fx-old {
+    display: none;
+  }
+}
+
+/* Giriş simgeleri (LoginIcons): her biri kendi durumunda kısa bir hareket yapar. */
+.li-swing {
+  transform-origin: 12px 3px;
+}
+.li-on .li-swing {
+  animation: li-swing 900ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.li-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.li-on .li-line {
+  animation: li-draw 520ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+.li-on .li-line-2 {
+  animation-delay: 260ms;
+}
+.li-window {
+  opacity: 0.45;
+  transition: opacity 300ms ease;
+}
+.li-on .li-window {
+  opacity: 1;
+  animation: li-light 520ms ease both;
+}
+.li-on .li-window-2 {
+  animation-delay: 120ms;
+}
+.li-on .li-window-3 {
+  animation-delay: 240ms;
+}
+.li-lid {
+  transform-origin: 12px 12px;
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.li-lashes {
+  transition: opacity 200ms ease;
+}
+.li-shaft {
+  transform-origin: 4.5px 12px;
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.li-head {
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.group\/submit:hover .li-shaft {
+  transform: scaleX(1.18);
+}
+.group\/submit:hover .li-head {
+  transform: translateX(2.5px);
+}
+.li-spin {
+  animation: li-spin 900ms linear infinite;
+}
+.li-check {
+  stroke-dasharray: 1;
+  animation: li-draw 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Giriş kodu kutlamasında tik, sarı daire yerine oturduğunda (yolculuğun %74'ü) çizilir. */
+.otp-celebrate .li-check {
+  animation-delay: 3.26s;
+}
+.otp-celebrate-done .li-check {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+@keyframes li-swing {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-9deg);
+  }
+  70% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes li-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes li-light {
+  0% {
+    opacity: 0.45;
+  }
+  40% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes li-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .li-on .li-swing,
+  .li-on .li-line,
+  .li-on .li-window,
+  .li-check {
+    animation: none;
+  }
+  .li-lid,
+  .li-shaft,
+  .li-head {
+    transition: none;
+  }
+}
+
+/* Yan sayfa (tedarikçi kartı): sağdan kayarak gelir, arkası kararır. */
+.sheet-panel {
+  animation: sheet-in 460ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.sheet-scrim {
+  animation: tour-fade 260ms ease both;
+}
+@keyframes sheet-in {
+  from {
+    transform: translateX(104%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel {
+    animation: tour-fade 160ms ease both;
+  }
+}
+
+/* Cari geçmiş "Hiç seçilmeyenler": tek altın kapsül satırlar arasında kayar. Yeri JS olayından değil CSS
+ * :hover'dan gelir; sayfa imlecin altından kaysa da hep doğru satırdadır, iki satır birden yanmaz.
+ * Kapsül en çok teklif verende (ilk satır) durur. İmlecin hızına yetişir: satırdan satıra beklemeden,
+ * kısa sürede kayar; yazı rengi de onunla aynı anda döner. İmleç listeden çıkınca yerine döner: bekleme (delay)
+ * yok, çünkü yoldaki bir kapsül beklerken iki satırın arasında asılı kalıyordu; ağır başlayan eğri o sakinliği verir. */
+.np-pill {
+  translate: 0 0;
+  transition:
+    translate 560ms cubic-bezier(0.5, 0, 0.2, 1),
+    background-color 240ms ease;
+}
+.np-list:has(> .np-row:hover) .np-pill {
+  transition-duration: 160ms, 120ms;
+  transition-delay: 0ms;
+  transition-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1), ease;
+}
+.np-list:has(> button.np-row:nth-of-type(1):hover) .np-pill {
+  background-color: #e6c53b;
+}
+.np-list:has(> button.np-row:nth-of-type(2):hover) .np-pill {
+  translate: 0 32px;
+}
+.np-list:has(> button.np-row:nth-of-type(3):hover) .np-pill {
+  translate: 0 64px;
+}
+.np-row {
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 420ms cubic-bezier(0.5, 0, 0.2, 1);
+}
+.np-row:first-of-type {
+  color: #141416;
+}
+.np-list:has(> .np-row:hover) .np-row {
+  color: rgba(255, 255, 255, 0.7);
+  transition-duration: 120ms;
+  transition-delay: 0ms;
+}
+.np-list:has(> .np-row:hover) .np-row:hover {
+  color: #141416;
+}
+.np-star {
+  color: inherit;
+}
+.np-list:has(> .np-row:hover) .np-row:not(:hover) .np-star {
+  color: var(--color-brand, #d9b625);
+}
+@media (prefers-reduced-motion: reduce) {
+  .np-pill,
+  .np-row {
+    transition-duration: 0ms !important;
+  }
+}
+
+/* Üzerine gelince arkada küçük bir altın degrade belirir, yukarı doğru söner (ışıma değil, dolgu). */
+.gold-fade {
+  position: relative;
+  isolation: isolate;
+}
+.gold-fade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(0deg, var(--gold-ease-100));
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 320ms var(--ease-out),
+    transform 420ms var(--ease-out);
+  pointer-events: none;
+}
+.gold-fade:hover::after,
+.gold-fade:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+.gold-fade-x::after {
+  /* Uzun, koyu satırlarda gradyan bantlanır; tek tonlu dolgu dikdörtgen iz bırakmaz. */
+  background: rgba(217, 182, 37, 0.06);
+  transform: none;
+}
+.gold-fade-x:hover::after,
+.gold-fade-x:focus-visible::after {
+  transform: none;
+}
+
+/* Değirmen: yavaşça döner; ilk girişte biraz daha hızlı başlayıp yavaşlar. */
+.windmill-spin {
+  animation:
+    windmill-in 2200ms var(--ease-out) backwards,
+    windmill-turn 90s linear 2200ms infinite;
+}
+@keyframes windmill-in {
+  from {
+    transform: rotate(-120deg);
+    opacity: 0;
+  }
+}
+@keyframes windmill-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pervane-forward,
+  .pervane-backward,
+  .side-texture,
+  .windmill-spin {
+    animation: none;
+  }
+}
+
+/* Bento kutuları: kenar üzerine gelince belirginleşir; öne çıkan kutudaki pervane deseni sağ alt
+ * köşeden sola ve yukarı söner. */
+.bento-tile {
+  transition:
+    border-color 260ms var(--ease-out),
+    transform 460ms var(--ease-spring);
+}
+a.bento-tile:hover,
+.bento-tile:has(> a:hover) {
+  border-color: rgba(255, 255, 255, 0.13);
+}
+a.bento-tile:hover {
+  transform: translateY(-2px);
+}
+a.bento-tile:active {
+  transform: translateY(0) scale(0.99);
+  transition-duration: 120ms;
+}
+.bento-pattern {
+  -webkit-mask-image: radial-gradient(120% 110% at 100% 100%, #000 0%, rgba(0, 0, 0, 0.4) 40%, transparent 75%);
+  mask-image: radial-gradient(120% 110% at 100% 100%, #000 0%, rgba(0, 0, 0, 0.4) 40%, transparent 75%);
+}
+
+/* Bekleyenler şeridi: her pay soldan büyüyerek yerine oturur. */
+.agenda-seg {
+  transform-origin: left center;
+  animation: seg-grow 700ms var(--ease-out) backwards;
+}
+@keyframes seg-grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+/* ─── Genie katmanı (lib/genie.ts) ──────────────────────────────────────────────
+ * Panelin kopyası şeritler hâlinde bükülür; gölge huninin biçimini izler. Kopyalarda hiçbir
+ * animasyon/geçiş oynamaz (asıl panelin giriş-çıkış sınıfları kopyaya da geçer). */
+[data-genie-hidden] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.genie-layer {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  contain: layout style;
+  will-change: opacity;
+}
+.genie-layer,
+.genie-layer * {
+  animation: none !important;
+  transition: none !important;
+}
+/* will-change: şerit bir kez çizilir ve o çözünürlükte kalır; animasyon boyunca yalnızca bileşik
+ * katman dönüşür (her karede yeniden çizim yok). Bulanıklık ve sondaki "çözünürlük sıçraması"
+ * olmasın diye ilk çizim, şerit yerindeyken ve ölçek 1'deyken yapılır (lib/genie.ts hazırlık
+ * karesi); efekt boyunca hiçbir şerit ölçek 1'i aşmaz. */
+.genie-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  clip-path: inset(0);
+  transform-origin: 0 0;
+  backface-visibility: hidden;
+  /* opacity: çökmüş şerit yalnızca söner (lib/genie.ts); yeniden çizim gerekmez. */
+  will-change: transform, opacity;
+}
+/* Genie ile kapanan diyalog: Base UI genie bitene kadar beklesin (popup zaten görünmez). */
+[data-genie][data-closed] {
+  animation-duration: 560ms !important;
+  animation-fill-mode: forwards !important;
+}
+/* Karartma kapanırken söner ve sönük kalır. Çıkış animasyonu "fill: none" olduğu için
+ * önce sönüp, diyalog DOM'dan kalkana kadar tam koyuluğuyla geri geliyordu (gölge gelip
+ * gidip yeniden geliyordu). Genie varken de onunla aynı sürede söner. */
+[data-slot='dialog-overlay'][data-closed] {
+  animation-fill-mode: forwards !important;
+}
+[data-slot='dialog-overlay'][data-closed]:has(~ [data-genie]) {
+  animation-duration: 560ms !important;
+}
+/* Panelin gölgesi: hareketin son anlarında, huni dikdörtgene yaklaştıkça belirir (kapanışta ilk
+ * anlarda söner); gerçek panele geçişte aynı gölge devam eder — sonradan ayrı bir adım yok. */
+.genie-ghost-shadow {
+  position: fixed;
+  z-index: 79;
+  pointer-events: none;
+  /* Büyük bulanık gölge bir kez çizilir; her karede yalnızca opaklığı değişir. */
+  will-change: opacity;
+}
+
+/* Kırıntının son öğesi sayfa değişince yukarıdan yerine düşer. */
+.crumb-in {
+  display: inline-block;
+  animation: drop-in 420ms var(--ease-out) backwards;
+}
+/* Saat: yalnızca değişen rakam yukarıdan kayar. */
+.digit-roll {
+  animation: digit-in 360ms var(--ease-out) backwards;
+}
+@keyframes digit-in {
+  from {
+    opacity: 0.3;
+    transform: translateY(-55%);
+  }
+}
+
+/* Basınca anında tepki: ölçek, yay ile geri döner. */
+.press {
+  transition: transform 460ms var(--ease-spring);
+}
+.press:active {
+  transform: scale(0.97);
+  transition-duration: 110ms;
+}
+
+/* Kabul halkası çizilerek dolar; aylık sütunlar alttan büyür (sırayla, animation-delay ile). */
+.ring-draw {
+  animation: ring-draw 1100ms var(--ease-out) both;
+}
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-full);
+  }
+}
+.bar-rise {
+  transform-origin: bottom;
+  animation: bar-rise 700ms var(--ease-out) both;
+}
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-draw,
+  .bar-rise {
+    animation: none;
+  }
+}
+
+/* Açılır menü: düğmesinden (transform-origin) büyüyerek gelir; hareket azaltılınca yalnız belirir. */
+.menu-pop {
+  animation: menu-pop 180ms var(--ease-out) both;
+}
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-pop {
+    animation: menu-fade 120ms linear both;
+  }
+  @keyframes menu-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .stagger > *,
+  .shell-rail-in,
+  .shell-bar-in,
+  .shell-panel-in,
+  .side-flyout,
+  .side-flyout-item {
+    animation: fade-in 200ms ease backwards !important;
+  }
+  .shell-panel-rise {
+    animation: none !important;
+  }
+  .wave-btn::before {
+    transform: none;
+    opacity: 0;
+    transition: opacity 120ms linear;
+  }
+  .wave-btn:hover::before,
+  .wave-btn[data-open]::before {
+    opacity: 1;
+    animation: none;
+  }
+  .roll > span {
+    transition: none;
+  }
+}
+
+/* ─── Birim OTP başarı: Pac-Man micro-interaction ─────────────────────────── */
+/* Kutular: w-11=2.75rem, gap-2=0.5rem → stride 3.25rem; satır ≈ 19rem */
+/* Pac: 4rem — tempo sakin (~4.4s), layout sabit */
+
+@keyframes otp-pac-journey {
+  0% {
+    transform: translate3d(-1.1rem, -50%, 0) scale(0.92);
+    opacity: 0;
+  }
+  6% {
+    transform: translate3d(-0.55rem, -50%, 0) scale(1);
+    opacity: 1;
+  }
+  14% {
+    transform: translate3d(calc(0 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+    opacity: 1;
+  }
+  22% {
+    transform: translate3d(calc(1 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+  }
+  30% {
+    transform: translate3d(calc(2 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+  }
+  38% {
+    transform: translate3d(calc(3 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+  }
+  46% {
+    transform: translate3d(calc(4 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+  }
+  54% {
+    transform: translate3d(calc(5 * 3.25rem - 0.625rem), -50%, 0) scale(1);
+  }
+  60% {
+    transform: translate3d(calc(5 * 3.25rem + 0.4rem), -50%, 0) scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: translate3d(7.5rem, -50%, 0) scale(1.04);
+    opacity: 1;
+  }
+  90%,
+  100% {
+    transform: translate3d(7.5rem, -50%, 0) scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes otp-pac-face {
+  0%,
+  5% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  8% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  12% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  16% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  20% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  24% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  28% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  32% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  36% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  40% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  44% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  48% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  52% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  56% {
+    clip-path: circle(50% at 50% 50%);
+  }
+  60% {
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 46% 50%, 100% 80%, 100% 100%, 0 100%);
+  }
+  66%,
+  100% {
+    clip-path: circle(50% at 50% 50%);
+  }
+}
+
+@keyframes otp-pac-check {
+  0%,
+  74% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  86%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes otp-success-label {
+  0%,
+  80% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  92%,
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes otp-digit-eat {
+  0% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale3d(0.72, 0.72, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale3d(0.05, 0.05, 1);
+  }
+}
+
+.otp-stage {
+  position: relative;
+  min-height: 7.25rem;
+  padding-bottom: 1.75rem;
+  overflow: visible;
+}
+
+.otp-stage .otp-pac {
+  position: absolute;
+  top: 1.75rem;
+  left: 0;
+  z-index: 30;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  background: var(--brand);
+  box-shadow: inset 0 -2px 6px rgb(0 0 0 / 0.12);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.otp-stage .otp-pac-check {
+  width: 2rem;
+  height: 2rem;
+  color: hsl(215, 25%, 14%);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.otp-stage .otp-success-label {
+  position: absolute;
+  left: 50%;
+  bottom: 0.15rem;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--foreground);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0);
+}
+
+.otp-celebrate .otp-pac {
+  will-change: transform, clip-path, opacity;
+  animation:
+    otp-pac-journey 4.4s cubic-bezier(0.33, 0.05, 0.2, 1) forwards,
+    otp-pac-face 4.4s linear forwards;
+}
+
+.otp-celebrate .otp-pac-check {
+  animation: otp-pac-check 4.4s ease forwards;
+}
+
+.otp-celebrate .otp-success-label {
+  animation: otp-success-label 4.4s ease forwards;
+}
+
+.otp-celebrate .otp-cell {
+  will-change: transform, opacity;
+  transform-origin: center center;
+  animation: otp-digit-eat 0.42s cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+.otp-celebrate .otp-cell:nth-child(1) {
+  animation-delay: 0.32s;
+}
+.otp-celebrate .otp-cell:nth-child(2) {
+  animation-delay: 0.68s;
+}
+.otp-celebrate .otp-cell:nth-child(3) {
+  animation-delay: 1.04s;
+}
+.otp-celebrate .otp-cell:nth-child(4) {
+  animation-delay: 1.4s;
+}
+.otp-celebrate .otp-cell:nth-child(5) {
+  animation-delay: 1.76s;
+}
+.otp-celebrate .otp-cell:nth-child(6) {
+  animation-delay: 2.12s;
+}
+
+.otp-celebrate-done .otp-pac {
+  animation: none;
+  opacity: 1;
+  transform: translate3d(7.5rem, -50%, 0) scale(1.12);
+  clip-path: circle(50% at 50% 50%);
+}
+
+.otp-celebrate-done .otp-pac-check {
+  animation: none;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.otp-celebrate-done .otp-success-label {
+  animation: none;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.otp-celebrate-done .otp-cell {
+  animation: none;
+  opacity: 0;
+  transform: scale3d(0.05, 0.05, 1);
+  pointer-events: none;
+}
+
+/* Sonner: opak, ince kenarlı yüzen yüzey; gölge yumuşak ve nötr. */
+[data-sonner-toaster] [data-sonner-toast].sonner-live-toast,
+[data-sonner-toaster] [data-sonner-toast] {
+  background: #1c1c1f !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-float) !important;
+  color: #f2f2ef !important;
+  font-family: var(--font-sans) !important;
+  letter-spacing: -0.005em;
+}
+/* Canlı bildirim: özel kart kendi çerçevesini çizer — dış Sonner kutusu yok */
+[data-sonner-toaster] [data-sonner-toast].sonner-notify-bare {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit !important;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  color: hsl(0 0% 98%) !important;
+}
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: hsl(0 0% 100% / 0.75) !important;
+}
+
+/* Okunmamış bildirim / mesaj ikonu — sık titreme */
+@keyframes notify-shake {
+  0%,
+  55%,
+  100% {
+    transform: rotate(0deg);
+  }
+  60% {
+    transform: rotate(-14deg);
+  }
+  66% {
+    transform: rotate(12deg);
+  }
+  72% {
+    transform: rotate(-10deg);
+  }
+  78% {
+    transform: rotate(8deg);
+  }
+  84% {
+    transform: rotate(-5deg);
+  }
+  90% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes sidebar-ticker {
+  0%,
+  20% {
+    transform: translateX(0);
+  }
+  55%,
+  75% {
+    transform: translateX(calc(-1 * var(--ticker-shift, 0px)));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-ticker {
+  animation: sidebar-ticker 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-ticker {
+    animation: none;
+  }
+}
+
+.animate-notify-shake {
+  animation: notify-shake 2.4s ease-in-out infinite;
+  transform-origin: top center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-notify-shake {
+    animation: none;
+  }
+}
+
+/* Üst yönetim onay kutusu — talep geçiş introsu */
+.exec-intro-root {
+  background: #0b0c0d;
+  animation: exec-intro-veil 2.4s ease forwards;
+}
+.exec-intro-glow {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 22rem;
+  height: 14rem;
+  transform: translate(-50%, -50%);
+  background: none;
+  pointer-events: none;
+  animation: exec-intro-glow 2.4s ease both;
+}
+.exec-intro-logo {
+  animation: exec-intro-logo 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.exec-intro-kicker {
+  animation: exec-intro-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+}
+.exec-intro-title {
+  animation: exec-intro-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
+}
+.exec-intro-facts {
+  animation: exec-intro-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.9s both;
+}
+
+@keyframes exec-intro-veil {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes exec-intro-logo {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(10px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.03) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes exec-intro-glow {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
+@keyframes exec-intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exec-intro-root,
+  .exec-intro-glow,
+  .exec-intro-logo,
+  .exec-intro-kicker,
+  .exec-intro-title,
+  .exec-intro-facts {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

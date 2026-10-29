@@ -1,0 +1,10 @@
+**/node_modules
+apps/*/.next
+apps/*/.next-deploy
+.next
+_yedek-orijinal-2026-10-26
+.git
+*.log
+apps/api/.env
+.env
+.env.local
