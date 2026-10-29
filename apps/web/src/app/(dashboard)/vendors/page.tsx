@@ -23,6 +23,7 @@ import {
   MailX,
   Tag,
   X,
+  Check,
   type LucideIcon,
 } from 'lucide-react';
 import { vendorsApi } from '@/lib/api';
@@ -408,357 +409,403 @@ function VendorFormDialog({
     });
   };
 
-  const inputClass = (field: keyof VendorFormData) =>
-    `border-border bg-background text-foreground ${formErrors[field] ? 'border-destructive ring-1 ring-destructive' : ''}`;
+  // Kapatma: Esc; açılınca yeni firmada ad alanı odaklanır.
+  const nameRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState('firma');
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isPending) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const focus = window.setTimeout(() => {
+      if (!editingVendor) nameRef.current?.focus();
+    }, 420);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.clearTimeout(focus);
+    };
+  }, [open, editingVendor, isPending, onClose]);
+
+  // Üstteki bölüm çipleri: hangi bölümdeysek o yanar (kaydırmaya göre), basınca oraya kayar.
+  useEffect(() => {
+    if (!open) return;
+    const root = bodyRef.current;
+    if (!root) return;
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-vf-section]'));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveSection((visible[0].target as HTMLElement).dataset.vfSection || 'firma');
+      },
+      { root, rootMargin: '0px 0px -65% 0px', threshold: 0 },
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [open]);
+
+  const goTo = (id: string) => {
+    setActiveSection(id);
+    bodyRef.current?.querySelector(`[data-vf-section="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  if (!open) return null;
+
+  const field = (error?: string) =>
+    cn(fieldClass, 'w-full px-3', error && 'border-destructive/60 focus:border-destructive/70 focus:ring-destructive/15');
+  const selectClass = cn(fieldClass, 'w-full appearance-none px-3 pr-10 disabled:cursor-not-allowed disabled:opacity-45');
+  const labelCls = 'text-[12.5px] font-medium text-white/55';
+  const sections = [
+    { id: 'firma', label: 'Firma' },
+    { id: 'kisiler', label: 'Kişiler' },
+    { id: 'urun', label: 'Ne satıyor' },
+    { id: 'adres', label: 'Adres' },
+  ];
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent
-        className="sm:max-w-[600px] border-border max-h-[90vh] overflow-y-auto"
-        style={{ background: 'hsl(0, 0%, 11%)' }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
-            {editingVendor ? 'Tedarikçi Düzenle' : 'Yeni Tedarikçi Ekle'}
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Tedarikçi firmanın cari bilgilerini girin.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={editingVendor ? 'Tedarikçiyi düzenle' : 'Yeni tedarikçi'}>
+      <button
+        type="button"
+        aria-label="Kapat"
+        onClick={() => !isPending && onClose()}
+        className="sheet-scrim absolute inset-0 cursor-default bg-black/55 backdrop-blur-[2px]"
+      />
+      <aside className="sheet-panel absolute inset-y-0 right-0 flex w-full max-w-[580px] flex-col overflow-hidden bg-[#161618] shadow-[-24px_0_60px_-30px_rgba(0,0,0,0.9)] sm:inset-y-3 sm:right-3 sm:rounded-[24px] sm:border sm:border-white/[0.08]">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
+          {/* Başlık: marka dokusu ve altın ışık; bölüm çipleri altında yapışık */}
+          <header className="texture-host relative shrink-0 overflow-hidden border-b border-hairline px-6 pb-4 pt-5">
+            <span aria-hidden className="tile-texture tile-texture-down" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(217,182,37,0.1),transparent_85%)]"
+            />
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-medium text-white/45">{editingVendor ? 'Tedarikçiyi düzenle' : 'Yeni tedarikçi'}</p>
+                <h2 className="mt-1.5 truncate text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-white">
+                  {editingVendor ? editingVendor.name : 'Firma bilgileri'}
+                </h2>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-white/45">
+                  {editingVendor ? 'Değişiklikler kaydedilince kartta görünür.' : 'Tedarikçi firmanın cari ve iletişim bilgilerini girin.'}
+                </p>
+              </div>
+              <IconButton label="Kapat" onClick={() => !isPending && onClose()}>
+                <X className="size-4" />
+              </IconButton>
+            </div>
+            <nav aria-label="Bölümler" className="relative mt-4 flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {sections.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => goTo(s.id)}
+                  aria-current={activeSection === s.id ? 'true' : undefined}
+                  className={cn(
+                    'press h-8 shrink-0 rounded-full px-3.5 text-[12.5px] font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand/40',
+                    activeSection === s.id ? 'bg-brand text-primary-foreground' : 'bg-white/[0.06] text-white/60 hover:bg-white/[0.1] hover:text-white',
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </nav>
+          </header>
 
-        <form onSubmit={handleSubmit} className="space-y-5 py-2">
-          {/* Firma Bilgileri */}
-          <div
-            className="p-4 rounded-lg space-y-4"
-            style={{ background: 'hsl(0, 0%, 10%)' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Firma Bilgileri
-            </p>
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-foreground text-sm">
-                  Firma Adı <span className="text-destructive">*</span>
+          <div ref={bodyRef} className="min-h-0 flex-1 space-y-9 overflow-y-auto px-6 pb-10 pt-6 [scrollbar-width:thin]">
+            {/* 1 · Firma */}
+            <section data-vf-section="firma" className="scroll-mt-4 space-y-4">
+              <h3 className="text-[15px] font-medium tracking-[-0.012em] text-white">Firma</h3>
+              <div className="space-y-2">
+                <Label className={labelCls}>
+                  Firma adı <span className="text-destructive">*</span>
                 </Label>
                 <Input
+                  ref={nameRef}
                   value={form.name}
                   onChange={(e) => set('name', e.target.value)}
                   placeholder="Örn: Acme Demir Çelik A.Ş."
-                  className={inputClass('name')}
+                  className={field(formErrors.name)}
                 />
-                {formErrors.name && (
-                  <p className="text-destructive text-xs">{formErrors.name}</p>
-                )}
+                {formErrors.name ? <p className="text-[12px] text-destructive">{formErrors.name}</p> : null}
               </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-foreground text-sm">Vergi Kimlik No</Label>
+              <div className="space-y-2">
+                <Label className={labelCls}>Vergi kimlik no</Label>
                 <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Hash className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/30" />
                   <Input
                     value={form.taxId}
                     onChange={(e) => set('taxId', e.target.value)}
                     placeholder="1234567890"
-                    className={`pl-10 ${inputClass('taxId')}`}
+                    inputMode="numeric"
+                    className={cn(field(formErrors.taxId), 'pl-10')}
                   />
                 </div>
               </div>
-
-              {canChooseModule && (
-                <div className="space-y-1.5">
-                  <Label className="text-foreground text-sm">Hangi modülün tedarikçisi</Label>
+              {canChooseModule ? (
+                <div className="space-y-2">
+                  <Label className={labelCls}>Hangi modülün tedarikçisi</Label>
                   <div className="relative">
-                    <select
-                      value={form.moduleId}
-                      onChange={(e) => set('moduleId', e.target.value)}
-                      className="w-full bg-background border border-border h-10 px-3 pr-9 py-2 rounded-md outline-none text-sm focus:ring-1 focus:ring-primary hover:border-primary transition-colors text-foreground appearance-none"
-                    >
+                    <select value={form.moduleId} onChange={(e) => set('moduleId', e.target.value)} className={selectClass}>
                       <option value="SATIN_ALMA">Satın Alma</option>
                       <option value="URETIM_PLANLAMA">Üretim Planlama</option>
                       <option value="YEDEK_PARCA">Yedek Parça</option>
                     </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-white/35" />
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    Tedarikçi yalnızca seçilen modülün taleplerinde listelenir.
+                  <p className="text-[12px] text-white/35">Tedarikçi yalnızca seçilen modülün taleplerinde listelenir.</p>
+                </div>
+              ) : null}
+            </section>
+
+            {/* 2 · Kişiler */}
+            <section data-vf-section="kisiler" className="scroll-mt-4 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.012em] text-white">
+                    Yetkili / iletişim
+                    <span className="rounded-full bg-white/[0.07] px-2 py-px text-[12px] font-normal tabular-nums text-white/55">{form.people.length}</span>
+                  </h3>
+                  <p className="mt-1 max-w-[52ch] text-[12.5px] leading-relaxed text-white/40">
+                    Talep, teklif ve hatırlatma e-postaları tüm adreslere, SMS tüm numaralara gider. İlk kişi birincildir; ikinci numara için ad yazmadan sadece numara da girebilirsiniz.
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Yetkili Bilgileri */}
-          <div
-            className="p-4 rounded-lg space-y-4"
-            style={{ background: 'hsl(0, 0%, 10%)' }}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Yetkili / İletişim Bilgileri
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
-                onClick={() => set('people', [...form.people, blankPerson()])}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Kişi ekle
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Firmada kaç kişiyle görüşüyorsanız hepsini alt alta ekleyin. Talep, teklif ve
-              hatırlatma e-postaları buradaki tüm adreslere, SMS de tüm numaralara gider. İlk kişi
-              birincil sayılır; ikinci cep / sabit hat için ad yazmadan sadece numara da
-              girebilirsiniz.
-            </p>
-            {formErrors.people && <p className="text-destructive text-xs">{formErrors.people}</p>}
-
-            <div className="space-y-2">
-              {form.people.map((person, idx) => (
-                <div
-                  key={person.id || idx}
-                  className="rounded-lg border border-border/50 p-3 space-y-2"
-                  style={{ background: 'hsl(0, 0%, 12%)' }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                      {idx === 0 ? 'Birincil kişi' : `${idx + 1}. kişi`}
-                    </span>
-                    {form.people.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() =>
-                          set(
-                            'people',
-                            form.people.filter((_, i) => i !== idx),
-                          )
-                        }
-                        aria-label="Kişiyi kaldır"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        value={person.name || ''}
-                        onChange={(e) => setPerson(idx, 'name', e.target.value)}
-                        placeholder="Ad Soyad"
-                        className="pl-10"
-                      />
-                    </div>
-                    <Input
-                      value={person.title || ''}
-                      onChange={(e) => setPerson(idx, 'title', e.target.value)}
-                      placeholder="Görev (ör. muhasebe)"
-                    />
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        inputMode="tel"
-                        value={person.phone || ''}
-                        onChange={(e) => setPerson(idx, 'phone', maskTrPhoneLoose(e.target.value))}
-                        placeholder={TR_PHONE_PLACEHOLDER}
-                        className="pl-10"
-                      />
-                    </div>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="email"
-                        inputMode="email"
-                        value={person.email || ''}
-                        onChange={(e) => setPerson(idx, 'email', e.target.value)}
-                        onBlur={(e) => setPerson(idx, 'email', normalizeEmail(e.target.value))}
-                        placeholder="kisi@firma.com"
-                        className="pl-10"
-                      />
-                    </div>
-                    <Input
-                      value={person.notes || ''}
-                      onChange={(e) => setPerson(idx, 'notes', e.target.value)}
-                      placeholder="Not (opsiyonel)"
-                      className="sm:col-span-2"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Ne satıyor + not */}
-          <div className="p-4 rounded-lg space-y-4" style={{ background: 'hsl(0, 0%, 10%)' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Ne Satıyor / Notlar
-            </p>
-
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Etiketler</Label>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Talep ekranındaki arama bu etiketlere bakar. &quot;MOTOR&quot; yazan biri bu firmayı
-                bulabilsin diye ne sattığını ekleyin. Enter veya virgülle ekleyin.
-              </p>
-              {form.categories.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {form.categories.map((category) => (
-                    <span
-                      key={category}
-                      className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary"
-                    >
-                      {category}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          set(
-                            'categories',
-                            form.categories.filter((c) => c !== category),
-                          )
-                        }
-                        className="text-primary/70 hover:text-primary"
-                        aria-label={`${category} etiketini kaldır`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  list="vendor-category-suggestions"
-                  value={categoryDraft}
-                  onChange={(e) => setCategoryDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      addCategories(categoryDraft);
-                    }
-                  }}
-                  placeholder="Örn: MOTOR, PASLANMAZ SAC"
-                  className="flex-1"
-                />
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
-                  onClick={() => addCategories(categoryDraft)}
+                  onClick={() => set('people', [...form.people, blankPerson()])}
+                  className="press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] border border-brand/45 px-3 text-[12.5px] font-medium text-brand outline-none transition-colors duration-150 hover:border-transparent hover:bg-brand hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
-                  Ekle
-                </Button>
+                  <Plus className="size-3.5" />
+                  Kişi ekle
+                </button>
               </div>
-              <datalist id="vendor-category-suggestions">
-                {categorySuggestions.map((c) => (
-                  <option key={c} value={c} />
+              {formErrors.people ? (
+                <p className="rounded-[12px] border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-[12.5px] text-destructive">{formErrors.people}</p>
+              ) : null}
+
+              <div className="space-y-3">
+                {form.people.map((person, idx) => (
+                  <div key={person.id || idx} className="rounded-[18px] border border-white/[0.07] bg-white/[0.02] p-4 transition-colors duration-200 focus-within:border-brand/35">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span
+                        className={cn(
+                          'inline-flex h-6 items-center rounded-full px-2.5 text-[11.5px] font-medium',
+                          idx === 0 ? 'bg-brand/15 text-brand' : 'bg-white/[0.06] text-white/50',
+                        )}
+                      >
+                        {idx === 0 ? 'Birincil kişi' : `${idx + 1}. kişi`}
+                      </span>
+                      {form.people.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            set(
+                              'people',
+                              form.people.filter((_, i) => i !== idx),
+                            )
+                          }
+                          aria-label="Kişiyi kaldır"
+                          className="press flex size-8 items-center justify-center rounded-[9px] text-white/35 outline-none transition-colors duration-150 hover:bg-destructive/15 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/40"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="relative">
+                        <User className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/30" />
+                        <Input
+                          value={person.name || ''}
+                          onChange={(e) => setPerson(idx, 'name', e.target.value)}
+                          placeholder="Ad soyad"
+                          className={cn(field(), 'pl-10')}
+                        />
+                      </div>
+                      <Input
+                        value={person.title || ''}
+                        onChange={(e) => setPerson(idx, 'title', e.target.value)}
+                        placeholder="Görev (ör. muhasebe)"
+                        className={field()}
+                      />
+                      <div className="relative">
+                        <Phone className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/30" />
+                        <Input
+                          inputMode="tel"
+                          value={person.phone || ''}
+                          onChange={(e) => setPerson(idx, 'phone', maskTrPhoneLoose(e.target.value))}
+                          placeholder={TR_PHONE_PLACEHOLDER}
+                          className={cn(field(), 'pl-10')}
+                        />
+                      </div>
+                      <div className="relative">
+                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/30" />
+                        <Input
+                          type="email"
+                          inputMode="email"
+                          value={person.email || ''}
+                          onChange={(e) => setPerson(idx, 'email', e.target.value)}
+                          onBlur={(e) => setPerson(idx, 'email', normalizeEmail(e.target.value))}
+                          placeholder="kisi@firma.com"
+                          className={cn(field(), 'pl-10')}
+                        />
+                      </div>
+                      <Input
+                        value={person.notes || ''}
+                        onChange={(e) => setPerson(idx, 'notes', e.target.value)}
+                        placeholder="Not (isteğe bağlı)"
+                        className={cn(field(), 'sm:col-span-2')}
+                      />
+                    </div>
+                  </div>
                 ))}
-              </datalist>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-foreground text-sm">Firma notu</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e: any) => set('notes', e.target.value)}
-                placeholder="Örn: ASİL ÇELİK - ETLİ BORU - TRANSMİSYON. Notlar da aramada taranır."
-                className="bg-background border-border text-foreground min-h-[70px]"
-              />
-            </div>
-          </div>
-
-          {/* Adres Bilgileri */}
-          <div
-            className="p-4 rounded-lg space-y-4"
-            style={{ background: 'hsl(0, 0%, 10%)' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Adres Bilgileri
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Şehir */}
-              <div className="space-y-1.5">
-                <Label className="text-foreground text-sm">Şehir</Label>
-                <div className="relative">
-                  <select
-                    value={form.city}
-                    onChange={(e) => set('city', e.target.value)}
-                    className="w-full bg-background border border-border h-10 px-3 pr-9 py-2 rounded-md outline-none text-sm focus:ring-1 focus:ring-primary hover:border-primary transition-colors text-foreground appearance-none"
-                  >
-                    <option value="">-- Şehir Seçin --</option>
-                    {CITY_LIST.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                </div>
               </div>
+            </section>
 
-              {/* İlçe */}
-              <div className="space-y-1.5">
-                <Label className="text-foreground text-sm">İlçe</Label>
-                <div className="relative">
-                  <select
-                    value={form.district}
-                    onChange={(e) => set('district', e.target.value)}
-                    disabled={!form.city}
-                    className="w-full bg-background border border-border h-10 px-3 pr-9 py-2 rounded-md outline-none text-sm focus:ring-1 focus:ring-primary hover:border-primary transition-colors text-foreground appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">-- İlçe Seçin --</option>
-                    {districts.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                </div>
+            {/* 3 · Ne satıyor */}
+            <section data-vf-section="urun" className="scroll-mt-4 space-y-4">
+              <div>
+                <h3 className="text-[15px] font-medium tracking-[-0.012em] text-white">Ne satıyor</h3>
+                <p className="mt-1 max-w-[52ch] text-[12.5px] leading-relaxed text-white/40">
+                  Talep ekranındaki arama bu etiketlere bakar: &quot;MOTOR&quot; yazan biri bu firmayı bulsun diye ne sattığını ekleyin.
+                </p>
               </div>
-
-              {/* Tam Adres */}
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-foreground text-sm">Tam Adres</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Textarea
-                    value={form.address}
-                    onChange={(e: any) => set('address', e.target.value)}
-                    placeholder="Mahalle, sokak, bina no..."
-                    className={`pl-10 bg-background border-border text-foreground min-h-[70px] ${inputClass('address')}`}
+              <div className="space-y-2.5">
+                <div className="flex gap-2">
+                  <Input
+                    list="vendor-category-suggestions"
+                    value={categoryDraft}
+                    onChange={(e) => setCategoryDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addCategories(categoryDraft);
+                      }
+                    }}
+                    placeholder="Örn: MOTOR, PASLANMAZ SAC  (Enter ile ekle)"
+                    className={cn(field(), 'flex-1')}
                   />
+                  <button
+                    type="button"
+                    onClick={() => addCategories(categoryDraft)}
+                    className="press h-11 shrink-0 rounded-[12px] border border-white/[0.12] px-4 text-[13px] font-medium text-white/70 outline-none transition-colors duration-150 hover:border-transparent hover:bg-brand hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {form.categories.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.categories.map((category) => (
+                      <span key={category} className="skel-in inline-flex items-center gap-1 rounded-full bg-brand/10 py-1 pl-3 pr-1.5 text-[12.5px] text-brand-ink">
+                        {category}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            set(
+                              'categories',
+                              form.categories.filter((c) => c !== category),
+                            )
+                          }
+                          className="flex size-5 items-center justify-center rounded-full text-brand-ink/70 outline-none transition-colors duration-150 hover:bg-brand/20 hover:text-brand-ink focus-visible:ring-2 focus-visible:ring-brand/40"
+                          aria-label={`${category} etiketini kaldır`}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <datalist id="vendor-category-suggestions">
+                  {categorySuggestions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="space-y-2">
+                <Label className={labelCls}>Firma notu</Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e: any) => set('notes', e.target.value)}
+                  placeholder="Örn: ASİL ÇELİK - ETLİ BORU - TRANSMİSYON. Notlar da aramada taranır."
+                  className={cn(field(), 'min-h-[84px] resize-none py-3 leading-relaxed')}
+                />
+              </div>
+            </section>
+
+            {/* 4 · Adres */}
+            <section data-vf-section="adres" className="scroll-mt-4 space-y-4">
+              <h3 className="text-[15px] font-medium tracking-[-0.012em] text-white">Adres</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className={labelCls}>Şehir</Label>
+                  <div className="relative">
+                    <select value={form.city} onChange={(e) => set('city', e.target.value)} className={selectClass}>
+                      <option value="">Şehir seçin</option>
+                      {CITY_LIST.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className={labelCls}>İlçe</Label>
+                  <div className="relative">
+                    <select
+                      value={form.district}
+                      onChange={(e) => set('district', e.target.value)}
+                      disabled={!form.city}
+                      className={selectClass}
+                    >
+                      <option value="">İlçe seçin</option>
+                      {districts.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                  </div>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className={labelCls}>Tam adres</Label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3.5 top-3.5 size-4 text-white/30" />
+                    <Textarea
+                      value={form.address}
+                      onChange={(e: any) => set('address', e.target.value)}
+                      placeholder="Mahalle, sokak, bina no…"
+                      className={cn(field(formErrors.address), 'min-h-[84px] resize-none py-3 pl-10 leading-relaxed')}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose} className="hover:bg-white/10">
-              İptal
-            </Button>
-            <Button
-              type="submit"
-              className="bg-primary text-primary-foreground font-semibold hover:opacity-90"
+          {/* Altbilgi: her zaman görünür */}
+          <footer className="flex shrink-0 items-center gap-2.5 border-t border-hairline bg-[#161618] px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
               disabled={isPending}
+              className="press h-11 rounded-[12px] px-4 text-[13.5px] font-medium text-white/65 outline-none transition-colors duration-150 hover:bg-white/[0.07] hover:text-white focus-visible:ring-2 focus-visible:ring-white/30 disabled:opacity-50"
             >
-              {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {editingVendor ? 'Değişiklikleri Kaydet' : 'Tedarikçiyi Kaydet'}
-            </Button>
-          </DialogFooter>
+              İptal
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="press group/save inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[12px] bg-brand text-[14px] font-semibold text-primary-foreground outline-none transition-colors duration-200 hover:bg-[#e4c43c] focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-60"
+            >
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" strokeWidth={2.4} />}
+              {editingVendor ? 'Değişiklikleri kaydet' : 'Tedarikçiyi kaydet'}
+            </button>
+          </footer>
         </form>
-      </DialogContent>
-    </Dialog>
+      </aside>
+    </div>
   );
 }
 

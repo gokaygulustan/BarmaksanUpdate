@@ -872,6 +872,11 @@ html[data-editing] [data-edit-key] {
   will-change: transform, opacity, filter;
   backface-visibility: hidden;
   transform: translateZ(0);
+  /* Harf katmanı kutusuna kırpılır; sıkı başlıklarda (satır yüksekliği ~1.06) ç/ş/ğ'nin kuyruğu ve İ'nin
+   * noktası kutunun dışına taşıyordu, bulanıklık/saydamlık sürerken kesik görünüp animasyon bitince düzeliyordu.
+   * İç boşluk kutuyu büyütür, eşit negatif dış boşluk yerleşimi (satır yüksekliği, harf aralığı) aynı tutar. */
+  padding: 0.24em 0.06em;
+  margin: -0.24em -0.06em;
 }
 .fx-letter.in {
   animation:
@@ -916,6 +921,9 @@ html[data-editing] [data-edit-key] {
   /* Harflerle aynı sebep: blok da hareket bitince katmandan çıkıp sıçramasın. */
   will-change: transform, opacity, filter;
   transform: translateZ(0);
+  /* Son satırın kuyruklu harfleri (ç, ş, g, y) katman kutusunun altında kırpılmasın. */
+  padding-bottom: 0.22em;
+  margin-bottom: -0.22em;
   animation:
     fx-rise-in 700ms cubic-bezier(0.23, 1, 0.32, 1) 180ms backwards,
     fx-rise-blur 385ms cubic-bezier(0.23, 1, 0.32, 1) 180ms backwards;
