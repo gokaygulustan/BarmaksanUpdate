@@ -1298,9 +1298,10 @@ function AnalysisContent() {
       />
 
       <div className="print-hidden mx-auto mb-8 w-full max-w-[297mm] space-y-6">
-        {/* Başlık kutusuz: solda geri, küçük üst satır, büyük ve ince talep adı; sağda eylemler. Kutu içinde kutu yok. */}
-        <header className="flex flex-col gap-6 pt-2 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
+        {/* Başlık kutusuz: solda geri, küçük üst satır, büyük ve ince talep adı; sağda eylemler. Kutu içinde kutu yok.
+         * Ad ve eylemler yan yana sığmazsa eylemler alt satıra iner (ad hiçbir zaman düğmelerin altına girmez). */}
+        <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6 pt-2">
+          <div className="min-w-0 max-w-full">
             <button
               type="button"
               onClick={() => router.back()}
@@ -1310,12 +1311,13 @@ function AnalysisContent() {
               Geri
             </button>
             <p className="fx-rise text-[12.5px] font-medium text-white/45">Teklif analiz raporu</p>
-            <h1 className="mt-1.5 break-words text-[28px] font-[300] leading-[1.1] tracking-[-0.03em] text-white sm:text-[36px] lg:text-[40px]">
+            {/* "25081_EKİPMAN_FİYAT_TALEBİ" gibi tek parça ad satırdan uzunsa harf aralarından bölünür. */}
+            <h1 className="mt-1.5 text-[28px] font-[300] leading-[1.1] tracking-[-0.03em] text-white sm:text-[36px] lg:text-[40px] [&_.fx-word]:max-w-full [&_.fx-word]:whitespace-normal!">
               <SmokeText text={req.title} />
             </h1>
           </div>
 
-          <div className="fx-rise flex shrink-0 flex-wrap items-center gap-2">
+          <div className="fx-rise flex flex-wrap items-center gap-2">
             <SecondaryButton
               icon={<Settings className="size-4" strokeWidth={1.8} />}
               onClick={() => setIsGroupModalOpen(true)}
