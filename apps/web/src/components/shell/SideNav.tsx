@@ -45,6 +45,12 @@ type RowRect = ReturnType<typeof rowRect>;
 
 /** Üst ve alt kapağın yüksekliği: en küçük satır 36 px, iki kapak 32 px eder (arada dolgu hep kalır). */
 const CAP = 16;
+/**
+ * Dolgu ve çizgi parçalarının gerçek yüksekliği. 1 px'lik parçayı 20-40 kat büyütmek GPU'da bulanık
+ * (kenara doğru saydamlaşan) çıkıyordu: yüzeyin ortasında koyu yatay çizgi olarak görünüyordu.
+ * Büyük bir gövdeyi küçültmek/az büyütmek tam opak kalır.
+ */
+const FILL_BASE = 128;
 
 /**
  * Yüzey üç parçadır: yuvarlak köşeli üst kapak, alt kapak ve aradaki düz dolgu. Yalnızca transform
@@ -63,7 +69,7 @@ function surfaceTransforms(r: RowRect, baseW: number) {
     top: `translate(${left}px, ${top}px) scaleX(${sx})`,
     bottom: `translate(${left}px, ${top + h - CAP}px) scaleX(${sx})`,
     // Dolgu iki yandan 2 px kapaklara biner: kapakların yarı saydam kenar pikseli dolgunun altında kalır.
-    fill: `translate(${left}px, ${top + CAP - 2}px) scale(${sx}, ${Math.max(h - CAP * 2 + 4, 1)})`,
+    fill: `translate(${left}px, ${top + CAP - 2}px) scale(${sx}, ${Math.max(h - CAP * 2 + 4, 1) / FILL_BASE})`,
   };
 }
 
@@ -84,7 +90,7 @@ function applySurface(blob: HTMLElement, r: RowRect, baseW: number) {
   fill.style.transform = t.fill;
 }
 
-const railTransform = (top: number, height: number) => `translateY(${top}px) scaleY(${height})`;
+const railTransform = (top: number, height: number) => `translateY(${top}px) scaleY(${height / FILL_BASE})`;
 
 /**
  * Eriyen gösterge: etkin satırın arkasındaki yüzey yeni satıra akar. Önce gidilen yöndeki kenar
@@ -542,16 +548,16 @@ export function SideNav({
             <span
               ref={blobRef}
               aria-hidden
-              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+              className="pointer-events-none absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-200"
             >
-              <span className="absolute left-0 top-0 h-4 w-full origin-top-left rounded-t-[11px] bg-brand will-change-transform" />
-              <span className="absolute left-0 top-0 h-4 w-full origin-top-left rounded-b-[11px] bg-brand will-change-transform" />
-              <span className="absolute left-0 top-0 h-px w-full origin-top-left bg-brand will-change-transform" />
+              <span className="absolute left-0 top-0 h-4 w-full origin-top-left rounded-t-[11px] bg-brand" />
+              <span className="absolute left-0 top-0 h-4 w-full origin-top-left rounded-b-[11px] bg-brand" />
+              <span className="absolute left-0 top-0 h-32 w-full origin-top-left bg-brand" />
             </span>
             <span
               ref={railRef}
               aria-hidden
-              className="pointer-events-none absolute -left-3.5 top-0 h-px w-[3px] origin-top rounded-r-full bg-brand opacity-0 transition-opacity duration-200 will-change-transform max-md:-left-2.5"
+              className="pointer-events-none absolute -left-3.5 top-0 h-32 w-[3px] origin-top rounded-r-full bg-brand opacity-0 transition-opacity duration-200 max-md:-left-2.5"
             />
 
             {entries.map((entry) => {
