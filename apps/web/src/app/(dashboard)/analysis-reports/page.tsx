@@ -249,40 +249,35 @@ export default function AnalysisReportsPage() {
                 <Link
                   key={req.id}
                   href={`/procurement/${req.id}/analysis`}
-                  className="bento-tile gold-fade group/card relative flex min-h-[132px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 outline-none focus-visible:border-brand/60 sm:p-5"
+                  className="gold-fade group/card relative flex min-h-[124px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 outline-none transition-colors duration-300 hover:border-white/[0.12] focus-visible:border-brand/60 sm:p-5"
                 >
-                  {/* Düz kutu, doku yok. Üzerine gelince panodaki gibi alttan sarı degrade yükselir; köşedeki
-                   * soluk değirmen çeyrek tur döner. */}
+                  {/* Sade kutu: hover'da hiçbir şey yerinden oynamaz (zıplama yok). Alttan sarı degrade
+                   * yükselir, köşedeki soluk değirmen yavaşça çeyrek tur döner, renkler belirginleşir. */}
                   <Windmill
                     spinning={false}
-                    className="pointer-events-none absolute -bottom-16 -right-14 size-[150px] text-brand opacity-[0.06] transition-[opacity,rotate,transform] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:rotate-90 group-hover/card:opacity-[0.16]"
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-5 bottom-0 h-[2px] origin-left scale-x-0 rounded-full bg-brand transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-x-100"
+                    className="pointer-events-none absolute -bottom-16 -right-14 size-[150px] text-brand opacity-[0.05] transition-[opacity,rotate] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:rotate-90 group-hover/card:opacity-[0.14]"
                   />
 
                   <div className="relative flex items-center justify-between gap-3 text-[12px]">
-                    <span className="flex min-w-0 items-center gap-2 font-medium" style={{ color: statusTone(req.status) }}>
-                      <span className="size-1.5 shrink-0 rounded-full bg-current" />
-                      <span className="truncate">{ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}</span>
+                    <span className="truncate font-medium" style={{ color: statusTone(req.status) }}>
+                      {ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}
                     </span>
                     <span className="shrink-0 tabular-nums text-white/35">
                       {format(new Date(req.createdAt), 'd MMM yyyy', { locale: tr })}
                     </span>
                   </div>
 
-                  <h3 className="relative mt-3 line-clamp-2 text-[15.5px] font-medium leading-snug tracking-[-0.01em] text-white [overflow-wrap:anywhere] transition-transform duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] group-hover/card:-translate-y-0.5">
+                  <h3 className="relative mt-2.5 line-clamp-2 text-[15px] font-medium leading-snug tracking-[-0.01em] text-white/85 [overflow-wrap:anywhere] transition-colors duration-300 group-hover/card:text-white">
                     {req.title}
                   </h3>
 
                   <div className="relative mt-auto flex items-center justify-between gap-3 pt-4">
-                    <span className="text-[12.5px] tabular-nums text-white/45">
+                    <span className="text-[12px] tabular-nums text-white/40">
                       {itemCount} kalem · {vendors.length} tedarikçi
                     </span>
                     <ArrowRight
                       aria-label={ready ? 'Analizi başlat' : 'Raporu aç'}
-                      className="size-4 shrink-0 -translate-x-1.5 text-brand opacity-0 transition-[opacity,transform] duration-300 group-hover/card:translate-x-0 group-hover/card:opacity-100"
+                      className="size-4 shrink-0 text-white/20 transition-colors duration-300 group-hover/card:text-brand"
                     />
                   </div>
                 </Link>
