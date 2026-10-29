@@ -105,19 +105,26 @@ function RequestCard({
   return (
     <Link
       href={href}
-      className="skel-in group/card relative block overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#1c1c1f] px-3.5 py-3 outline-none transition-[border-color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-brand/40 hover:bg-[#202023] focus-visible:border-brand/60 active:translate-y-0"
+      className="skel-in texture-host group/card relative block overflow-hidden rounded-[16px] border border-white/[0.08] bg-card px-4 py-3.5 outline-none transition-[border-color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-brand/40 focus-visible:border-brand/60 active:translate-y-0 active:duration-100"
     >
+      {/* Kartın içinde: marka dokusu (üstte belirgin, aşağı doğru söner) ve hafif sarımtırak degrade.
+          Kartların arkası (sayfa zemini) boş kalır. İmleç kartın üstündeyken doku yavaşça kayar. */}
+      <span aria-hidden className="tile-texture tile-texture-down" />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,rgba(217,182,37,0.12),rgba(217,182,37,0.03)_52%,transparent_78%)] transition-opacity duration-300 group-hover/card:opacity-100"
+      />
       {/* Soldan altın çizgi: üzerine gelince ortadan açılır. */}
       <span
         aria-hidden
-        className="absolute inset-y-2.5 left-0 w-[2px] origin-center scale-y-0 rounded-r-full bg-brand transition-transform duration-300 ease-out group-hover/card:scale-y-100"
+        className="absolute inset-y-3 left-0 w-[2px] origin-center scale-y-0 rounded-r-full bg-brand transition-transform duration-300 ease-out group-hover/card:scale-y-100"
       />
-      <p className="line-clamp-2 text-[14px] font-medium leading-snug text-white">{row.title}</p>
-      <p className={cn('mt-1 text-[12.5px] leading-snug', rejected ? 'text-[#f2705e]' : 'text-white/50')}>
+      <p className="relative line-clamp-2 text-[14.5px] font-medium leading-snug tracking-[-0.008em] text-white">{row.title}</p>
+      <p className={cn('relative mt-1 text-[12.5px] leading-snug', rejected ? 'text-[#f2705e]' : 'text-white/55')}>
         {pipeline.caption}
       </p>
 
-      <div className="mt-2.5 flex h-6 items-center gap-2 text-[12px] text-white/40">
+      <div className="relative mt-3 flex h-6 items-center gap-2 text-[12px] text-white/45">
         <span className="flex min-w-0 gap-1">
           <span className="min-w-0 truncate">{row.requesterUnit || 'Birim belirtilmemiş'}</span>
           {row.createdAt ? <span className="shrink-0 tabular-nums">· {shortDay(row.createdAt)}</span> : null}
@@ -176,35 +183,14 @@ function ColumnHeader({ label, count }: { label: string; count: number }) {
   );
 }
 
-/** Sütun kutusunun zemini: üstte hafif sarımtırak degrade + marka dokusu (aşağı doğru söner). */
-function BoxBackdrop({ strong = true }: { strong?: boolean }) {
-  return (
-    <>
-      <span aria-hidden className="tile-texture tile-texture-down" />
-      <span
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute inset-0',
-          strong
-            ? 'bg-[linear-gradient(180deg,rgba(217,182,37,0.09),rgba(217,182,37,0.025)_42%,transparent_72%)]'
-            : 'bg-[linear-gradient(180deg,rgba(217,182,37,0.05),transparent_60%)]',
-        )}
-      />
-    </>
-  );
-}
-
-/** Boş aşama: başlığı kadar dar kutu; sırası görünür kalır, panoyu genişletmez. */
+/** Boş aşama: başlığı kadar dar sütun; sırası görünür kalır, panoyu genişletmez. */
 function EmptyColumn({ label }: { label: string }) {
   return (
-    <section className="texture-host relative flex w-max min-w-[128px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-white/[0.06] bg-card p-3 max-md:snap-start">
-      <BoxBackdrop strong={false} />
-      <div className="relative">
-        <ColumnHeader label={label} count={0} />
-        <p className="rounded-[12px] border border-dashed border-white/[0.07] py-6 text-center text-[12.5px] text-white/30">
-          Talep yok
-        </p>
-      </div>
+    <section className="flex w-max min-w-[120px] shrink-0 flex-col max-md:snap-start">
+      <ColumnHeader label={label} count={0} />
+      <p className="rounded-[12px] border border-dashed border-white/[0.07] py-6 text-center text-[12.5px] text-white/30">
+        Talep yok
+      </p>
     </section>
   );
 }
@@ -229,16 +215,13 @@ function Column({
   footer?: ReactNode;
 } & CardProps) {
   return (
-    <section className="texture-host relative flex min-w-[220px] flex-1 flex-col overflow-hidden rounded-[20px] border border-white/[0.07] bg-card p-3 max-md:min-w-[80vw] max-md:snap-start">
-      <BoxBackdrop />
-      <div className="relative">
-        <ColumnHeader label={label} count={count} />
-      </div>
-      <div className="relative min-h-0 flex-1 space-y-2 overflow-y-auto pb-1 [scrollbar-width:thin]">
+    <section className="flex min-w-[220px] flex-1 flex-col max-md:min-w-[80vw] max-md:snap-start">
+      <ColumnHeader label={label} count={count} />
+      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pb-2 [scrollbar-width:thin]">
         {loading ? (
           <div aria-hidden className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="rounded-[12px] border border-white/[0.07] bg-card px-3.5 py-3">
+              <div key={i} className="rounded-[16px] border border-white/[0.07] bg-card px-4 py-3.5">
                 <Skeleton className="h-3.5 rounded-full" style={{ '--i': i, width: `${78 - i * 12}%` } as CSSProperties} />
                 <Skeleton className="mt-2.5 h-3 w-2/5 rounded-full opacity-70" style={{ '--i': i + 1 } as CSSProperties} />
                 <Skeleton className="mt-3 h-3 w-1/3 rounded-full opacity-60" style={{ '--i': i + 2 } as CSSProperties} />
