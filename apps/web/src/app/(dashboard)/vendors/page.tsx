@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
+
+/** Firma kartları bu kadar kadar basılır; altına inildikçe devamı gelir. */
+const GRID_STEP = 24;
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -938,6 +941,33 @@ export default function VendorsPage() {
     [filtered, sortKey],
   );
 
+  // Kartlar parça parça basılır: 304 kartı birden basmak ~7.700 DOM düğümü, ~360 animasyon ve 140 ms'lik
+  // bir donma demekti (sayfaya geçerken menü ve yazılar takılıyordu). Altına inildikçe yenisi eklenir;
+  // arama, süzgeç ve sıralama yine bütün liste üzerinde çalışır.
+  const [shown, setShown] = useState(GRID_STEP);
+  const gridEndRef = useRef<HTMLDivElement>(null);
+  const gridSignature = `${sorted.length}:${sorted[0]?.id ?? ''}:${sortKey}`;
+  useEffect(() => {
+    setShown(GRID_STEP);
+  }, [gridSignature]);
+  useEffect(() => {
+    const end = gridEndRef.current;
+    if (!end || shown >= sorted.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setShown((n) => Math.min(sorted.length, n + GRID_STEP));
+      },
+      { root: end.closest('main'), rootMargin: '0px 0px 900px 0px' },
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [shown, sorted.length]);
+
+  const handleOpen = useCallback((id: string) => {
+    setSelectedId(id);
+    setTagEditFor(null);
+  }, []);
+
   const saveTags = (vendor: Vendor) => {
     const incoming = tagDraft
       .split(',')
@@ -1200,11 +1230,24 @@ export default function VendorsPage() {
             />
           </Tile>
         ) : (
-          <div data-tour="vendors-list" className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {sorted.map((vendor) => (
-              <VendorCard key={vendor.id} vendor={vendor} onOpen={() => openVendor(vendor.id)} />
-            ))}
-          </div>
+          <>
+            <div data-tour="vendors-list" className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {sorted.slice(0, shown).map((vendor) => (
+                <VendorCard key={vendor.id} vendor={vendor} onOpen={handleOpen} />
+              ))}
+            </div>
+            {shown < sorted.length ? (
+              <div ref={gridEndRef} className="flex justify-center pt-5">
+                <button
+                  type="button"
+                  onClick={() => setShown((n) => Math.min(sorted.length, n + GRID_STEP * 2))}
+                  className="press h-10 rounded-[11px] border border-white/[0.12] px-4 text-[13px] font-medium text-white/60 outline-none transition-colors duration-150 hover:border-transparent hover:bg-brand hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
+                >
+                  {(sorted.length - shown).toLocaleString('tr-TR')} firma daha
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </Swap>
 
@@ -1457,14 +1500,14 @@ function SummaryFilter({
  * Firma kartı (pano kutuları gibi): üzerine gelince alttan altın dolgu yükselir, kart hafifçe kalkar, baş harf
  * kutusu alttan dolar, alt çizgi soldan uzanır ve köşede ok belirir. Basınca firma sayfası sağdan açılır.
  */
-function VendorCard({ vendor, onOpen }: { vendor: Vendor; onOpen: () => void }) {
+const VendorCard = memo(function VendorCard({ vendor, onOpen }: { vendor: Vendor; onOpen: (id: string) => void }) {
   const lead = vendorToPeople(vendor).find((p) => p.name || p.phone);
   const phone = lead?.phone || vendor.contactPhone;
   const categories = vendor.categories || [];
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={() => onOpen(vendor.id)}
       className="gold-fade group/card relative flex min-h-[184px] flex-col rounded-[20px] border border-white/[0.07] bg-card p-5 text-left outline-none transition-[border-color,transform] duration-500 ease-[cubic-bezier(0.34,1.4,0.64,1)] hover:-translate-y-0.5 hover:border-white/[0.14] focus-visible:ring-2 focus-visible:ring-brand/40 active:scale-[0.99] active:duration-100"
     >
       <span
@@ -1513,7 +1556,7 @@ function VendorCard({ vendor, onOpen }: { vendor: Vendor; onOpen: () => void }) 
       </span>
     </button>
   );
-}
+});
 
 /** Kişi kartındaki yuvarlak hızlı eylem; bağlantı yoksa soluk ve pasif. */
 function QuickAction({
