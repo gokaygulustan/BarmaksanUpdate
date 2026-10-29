@@ -1,8 +1,9 @@
 'use client';
 
 import { SmokeText } from '@/components/SmokeText';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { internalRequestsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -19,8 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Trash2, X } from 'lucide-react';
 import { DetailSkeleton } from '@/components/page/Skeleton';
+import { Dot, IconButton, Initial, PrimaryButton, Tile, TileHeader, fieldClass } from '@/components/page/Page';
 import { toast } from 'sonner';
 import { RequestThread, ReviewNote } from '@/components/RequestThread';
 import { RichBody, AuthImage } from '@/components/RichBody';
@@ -37,13 +39,17 @@ const statusLabel: Record<string, string> = {
   CONVERTED: 'Tedarikçi talebi açıldı',
 };
 
-const statusBadgeClass: Record<string, string> = {
-  DRAFT: 'border-white/20 bg-white/10 text-white/80',
-  SUBMITTED: 'border-amber-500/40 bg-amber-500/15 text-amber-200',
-  APPROVED: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
-  REJECTED: 'border-destructive/40 bg-destructive/15 text-destructive',
-  CONVERTED: 'border-primary/40 bg-primary/15 text-primary',
+/** Durum hapı: kenarsız, durum renginde hafif dolgu. */
+const statusPillClass: Record<string, string> = {
+  DRAFT: 'bg-white/[0.06] text-white/70',
+  SUBMITTED: 'bg-brand/[0.12] text-brand',
+  APPROVED: 'bg-emerald-400/[0.12] text-emerald-300',
+  REJECTED: 'bg-destructive/[0.14] text-[#f2705e]',
+  CONVERTED: 'bg-sky-400/[0.12] text-sky-300',
 };
+
+const fullDay = (value: string) =>
+  new Date(value).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 type StaffUser = { id: string; name: string; email: string };
 
@@ -161,186 +167,259 @@ export default function InternalRequestDetailPage() {
 
   const splits = (data.splits || []) as UnitSplit[];
   const openItems = (data.items || []).filter((item: { procurementRequestId?: string | null }) => !item.procurementRequestId);
+  const attachments = (data.attachments ?? []) as any[];
+  const reviewing = canReview && data.status === 'SUBMITTED';
+  const converting = canConvert && data.status === 'APPROVED' && openItems.length > 0;
+  const hasAside = reviewing || converting;
+  const busy = approveMut.isPending || rejectMut.isPending;
+  const back =
+    user?.role === 'DEPARTMENT'
+      ? { href: '/taleplerim', label: 'Taleplerim' }
+      : { href: '/internal-requests', label: 'Birim tedarik talepleri' };
+  const meta = [
+    data.requesterUnit,
+    data.shopDepartment?.collarType === 'BLUE_COLLAR' ? 'Mavi yaka' : null,
+    data.shopWorker ? `${data.shopWorker.firstName} ${data.shopWorker.lastName}` : null,
+    data.createdAt ? fullDay(data.createdAt) : null,
+  ].filter(Boolean) as string[];
 
   return (
-    <div className="skel-in max-w-4xl mx-auto space-y-4">
+    <div className={cn('skel-in mx-auto pb-10', hasAside ? 'max-w-6xl' : 'max-w-3xl')}>
       <DocumentTitle topic="Birim tedarik talebi" detail={data.title} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold"><SmokeText text={data.title} /></h1>
-          {(data.requesterUnit || data.neededBy || data.shopWorker) && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {data.requesterUnit || ''}
-              {data.shopDepartment?.collarType === 'BLUE_COLLAR' ? ' · mavi yaka' : ''}
-              {data.shopWorker
-                ? ` · ${data.shopWorker.firstName} ${data.shopWorker.lastName}`
-                : ''}
-              {data.neededBy
-                ? `${data.requesterUnit || data.shopWorker ? ' · ' : ''}lazım ${new Date(data.neededBy).toLocaleDateString('tr-TR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}`
-                : ''}
-            </p>
-          )}
+
+      <Link
+        href={back.href}
+        className="group/back mb-5 inline-flex items-center gap-1.5 text-[13px] text-white/45 outline-none transition-colors duration-200 hover:text-white focus-visible:text-white"
+      >
+        <ArrowLeft className="size-4 transition-transform duration-200 ease-out group-hover/back:-translate-x-0.5" />
+        {back.label}
+      </Link>
+
+      {/* Başlık kutusuz: büyük ad, altında kim / ne zaman / ne zamana lazım; sağda durum ve silme. */}
+      <header className="flex flex-col gap-4 pb-7 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[26px] font-medium leading-[1.1] tracking-[-0.03em] text-white [overflow-wrap:anywhere] sm:text-[32px]">
+            <SmokeText text={data.title} />
+          </h1>
+          {meta.length || data.neededBy ? (
+            <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13.5px] text-white/50">
+              {meta.map((part, i) => (
+                <Fragment key={i}>
+                  {i > 0 ? <Dot /> : null}
+                  <span>{part}</span>
+                </Fragment>
+              ))}
+              {data.neededBy ? (
+                <>
+                  {meta.length ? <Dot /> : null}
+                  <span className="text-white/80">Lazım: {fullDay(data.neededBy)}</span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {canDeleteAny && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 border-destructive/45 px-3 text-destructive hover:bg-destructive/10"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-              Sil
-            </Button>
-          )}
+        <div className="flex shrink-0 items-center gap-1.5">
           <span
             className={cn(
-              'inline-flex h-9 items-center rounded-md border px-3 text-sm font-semibold tracking-wide',
-              statusBadgeClass[data.status] || 'border-border bg-muted text-foreground'
+              'inline-flex h-8 items-center rounded-full px-3.5 text-[13px] font-medium',
+              statusPillClass[data.status] || 'bg-white/[0.06] text-white/70',
             )}
           >
             {statusLabel[data.status] || data.status}
           </span>
+          {canDeleteAny ? (
+            <IconButton label="Talebi sil" tone="danger" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+            </IconButton>
+          ) : null}
         </div>
-      </div>
-      {data.description && (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <div className="bg-black/20 px-3 py-2 text-sm text-muted-foreground">Talep açıklaması</div>
-          <div className="p-3">
-            <RichBody text={data.description} requestId={id} className="text-sm" />
-          </div>
-        </div>
-      )}
-      {data.internalNote && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 overflow-hidden">
-          <div className="border-b border-amber-500/15 px-3 py-2 text-sm text-muted-foreground">
-            İç not · tedarikçiyle paylaşılmaz
-          </div>
-          <div className="p-3 whitespace-pre-line text-sm">{data.internalNote}</div>
-        </div>
-      )}
-      <UnitRequestLines
-        requestId={id}
-        items={data.items || []}
-        splits={splits}
-        onDownload={download}
-        selectable={canConvert && data.status === 'APPROVED' && openItems.length > 0}
-        picked={picked}
-        onToggle={(itemId) =>
-          setPicked((prev) => (prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId]))
-        }
-        hrefFor={
-          user?.role === 'DEPARTMENT'
-            ? undefined
-            : (split) =>
-                split.status === 'DRAFT' ? `/procurement/new?edit=${split.id}` : `/procurement/${split.id}`
-        }
-      />
-      {(data.attachments?.length ?? 0) > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ekler</p>
-          <div className="flex flex-wrap gap-2">
-            {(data.attachments ?? []).map((att: any) =>
-              isImageFile(att.originalName, att.mimeType) ? (
-                <AuthImage
-                  key={att.id}
-                  requestId={id}
-                  attachmentId={att.id}
-                  className="h-24 w-24 rounded-lg object-cover"
-                />
-              ) : (
-                <DocCard
-                  key={att.id}
-                  name={att.originalName}
-                  size={att.size}
-                  mime={att.mimeType}
-                  onOpen={() => download(att.id, att.originalName)}
-                />
-              )
-            )}
-          </div>
-        </div>
-      )}
-      <ReviewNote note={data.reviewNote} author={data.reviewedBy?.name} at={data.reviewedAt} />
-      {canReview && data.status === 'SUBMITTED' && (
-        <div className="space-y-3 rounded-xl border border-border p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Personel</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {staff.map((person) => {
-              const selected = selectedIds.includes(person.id);
-              return (
-                <button
-                  key={person.id}
-                  type="button"
-                  onClick={() => toggleStaff(person.id)}
-                  className={cn(
-                    'flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
-                    selected ? 'border-primary bg-primary/10' : 'border-white/10 bg-black/20 hover:bg-white/5'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
-                      selected ? 'border-primary bg-primary text-primary-foreground' : 'border-white/20'
-                    )}
-                  >
-                    {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold">{person.name}</span>
-                    <span className="block text-xs text-muted-foreground">{person.email}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <Textarea placeholder="Not (isteğe bağlı)" value={note} onChange={(e) => setNote(e.target.value)} />
-          <div className="flex gap-2">
-            <Button disabled={!selectedIds.length || approveMut.isPending} onClick={() => approveMut.mutate()}>
-              Onayla
-            </Button>
-            <Button variant="outline" onClick={() => rejectMut.mutate()}>
-              Reddet
-            </Button>
-          </div>
-        </div>
-      )}
-      {chatOpen && <RequestThread requestId={id} />}
-      {canConvert && data.status === 'APPROVED' && openItems.length > 0 && (
-        <div className="space-y-3 rounded-xl border border-border p-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tedarik talebinin adı</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Boya ayrı, metal ayrı gidecekse kalemleri seçip her grup için kendi adını yazın.
-            </p>
-          </div>
-          <Input
-            value={rfqTitle}
-            onChange={(e) => setRfqTitle(e.target.value)}
-            placeholder={data.title || 'Örneğin boya alımı'}
-            maxLength={200}
+      </header>
+
+      {/* Solda talebin kendisi; incelenecek ya da tedarik talebine çevrilecekse sağda, kaydırırken sabit
+       * duran karar paneli. */}
+      <div className={cn('grid items-start gap-4', hasAside && 'lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-5')}>
+        <div className="min-w-0 space-y-4">
+          {data.description ? (
+            <Tile>
+              <TileHeader title="Açıklama" />
+              <div className="px-6 py-5">
+                <RichBody text={data.description} requestId={id} className="text-[14px] leading-relaxed text-white/80" />
+              </div>
+            </Tile>
+          ) : null}
+
+          {data.internalNote ? (
+            <section className="rounded-[22px] border border-brand/20 bg-brand/[0.04] px-6 py-5">
+              <p className="text-[12px] font-medium text-brand/90">İç not · tedarikçiyle paylaşılmaz</p>
+              <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-white/80">{data.internalNote}</p>
+            </section>
+          ) : null}
+
+          <UnitRequestLines
+            requestId={id}
+            items={data.items || []}
+            splits={splits}
+            onDownload={download}
+            selectable={converting}
+            picked={picked}
+            onToggle={(itemId) =>
+              setPicked((prev) => (prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId]))
+            }
+            hrefFor={
+              user?.role === 'DEPARTMENT'
+                ? undefined
+                : (split) =>
+                    split.status === 'DRAFT' ? `/procurement/new?edit=${split.id}` : `/procurement/${split.id}`
+            }
           />
-          <button
-            type="button"
-            disabled={convertMut.isPending || picked.length === 0}
-            onClick={() => convertMut.mutate({ itemIds: picked, title: rfqTitle.trim() })}
-            className="flex h-14 w-full items-center justify-center rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 disabled:opacity-60"
-          >
-            {convertMut.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : picked.length === openItems.length && splits.length === 0 ? (
-              'Tedarikçi talebi oluştur'
-            ) : (
-              `Seçilen ${picked.length} kalemden tedarik talebi aç`
-            )}
-          </button>
+
+          {attachments.length > 0 ? (
+            <Tile>
+              <TileHeader title="Ekler" aside={attachments.length} />
+              <div className="flex flex-wrap gap-2.5 px-6 py-5">
+                {attachments.map((att) =>
+                  isImageFile(att.originalName, att.mimeType) ? (
+                    <AuthImage
+                      key={att.id}
+                      requestId={id}
+                      attachmentId={att.id}
+                      className="h-24 w-24 rounded-[14px] object-cover"
+                    />
+                  ) : (
+                    <DocCard
+                      key={att.id}
+                      name={att.originalName}
+                      size={att.size}
+                      mime={att.mimeType}
+                      onOpen={() => download(att.id, att.originalName)}
+                    />
+                  ),
+                )}
+              </div>
+            </Tile>
+          ) : null}
+
+          <ReviewNote note={data.reviewNote} author={data.reviewedBy?.name} at={data.reviewedAt} />
+          {chatOpen && <RequestThread requestId={id} />}
         </div>
-      )}
+
+        {hasAside ? (
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6">
+            {reviewing ? (
+              <Tile>
+                <TileHeader title="İnceleme" aside={selectedIds.length ? `${selectedIds.length} kişi seçili` : null} />
+                <div className="space-y-5 p-5">
+                  <div>
+                    <p className="text-[13.5px] font-medium text-white/90">Kime atansın?</p>
+                    <p className="mt-0.5 text-[12.5px] leading-snug text-white/45">
+                      Talebi takip edecek satın alma personelini seçin.
+                    </p>
+                    <div className="mt-3 space-y-1.5">
+                      {staff.map((person) => {
+                        const selected = selectedIds.includes(person.id);
+                        return (
+                          <button
+                            key={person.id}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => toggleStaff(person.id)}
+                            className={cn(
+                              'flex w-full items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand/40',
+                              selected
+                                ? 'border-brand/50 bg-brand/[0.08]'
+                                : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.14] hover:bg-white/[0.04]',
+                            )}
+                          >
+                            <Initial name={person.name} className="size-8 text-[12px] ring-0" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13.5px] font-medium text-white">{person.name}</span>
+                              <span className="block truncate text-[12px] text-white/45">{person.email}</span>
+                            </span>
+                            <span
+                              className={cn(
+                                'flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-200',
+                                selected ? 'border-brand bg-brand text-[#141416]' : 'border-white/20',
+                              )}
+                            >
+                              {selected ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {staff.length === 0 ? (
+                        <p className="rounded-[14px] border border-dashed border-white/[0.08] py-5 text-center text-[12.5px] text-white/35">
+                          Atanabilecek personel yok
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <Textarea
+                    placeholder="Not (isteğe bağlı)"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className={cn(fieldClass, 'h-auto min-h-[88px] resize-none px-3.5 py-3 shadow-none')}
+                  />
+
+                  <div className="space-y-2">
+                    <PrimaryButton
+                      className="w-full"
+                      disabled={!selectedIds.length || busy}
+                      onClick={() => approveMut.mutate()}
+                      icon={approveMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                    >
+                      Onayla ve ata
+                    </PrimaryButton>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => rejectMut.mutate()}
+                      className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-[11px] border border-white/[0.1] text-[14px] font-medium text-white/70 outline-none transition-colors duration-200 hover:border-destructive/60 hover:bg-destructive/10 hover:text-[#f2705e] focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      {rejectMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                      Reddet
+                    </button>
+                    {!selectedIds.length ? (
+                      <p className="pt-1 text-center text-[12px] text-white/35">Onaylamak için en az bir kişi seçin.</p>
+                    ) : null}
+                  </div>
+                </div>
+              </Tile>
+            ) : null}
+
+            {converting ? (
+              <Tile>
+                <TileHeader title="Tedarik talebi aç" aside={`${picked.length}/${openItems.length} kalem`} />
+                <div className="space-y-4 p-5">
+                  <p className="text-[12.5px] leading-relaxed text-white/45">
+                    Boya ayrı, metal ayrı gidecekse kalemleri seçip her grup için kendi adını yazın.
+                  </p>
+                  <label className="block">
+                    <span className="text-[13.5px] font-medium text-white/90">Talebin adı</span>
+                    <Input
+                      value={rfqTitle}
+                      onChange={(e) => setRfqTitle(e.target.value)}
+                      placeholder={data.title || 'Örneğin boya alımı'}
+                      maxLength={200}
+                      className={cn(fieldClass, 'mt-2 px-3.5 shadow-none')}
+                    />
+                  </label>
+                  <PrimaryButton
+                    className="h-12 w-full"
+                    disabled={convertMut.isPending || picked.length === 0}
+                    onClick={() => convertMut.mutate({ itemIds: picked, title: rfqTitle.trim() })}
+                    icon={convertMut.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  >
+                    {picked.length === openItems.length && splits.length === 0
+                      ? 'Tedarikçi talebi oluştur'
+                      : `Seçilen ${picked.length} kalemle talep aç`}
+                  </PrimaryButton>
+                </div>
+              </Tile>
+            ) : null}
+          </aside>
+        ) : null}
+      </div>
 
       <Dialog open={deleteOpen} onOpenChange={(open) => !deleteMut.isPending && setDeleteOpen(open)}>
         <DialogContent className="sm:max-w-md border-border bg-card">
