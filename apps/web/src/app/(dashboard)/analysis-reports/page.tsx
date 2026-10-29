@@ -249,14 +249,9 @@ export default function AnalysisReportsPage() {
                 <Link
                   key={req.id}
                   href={`/procurement/${req.id}/analysis`}
-                  className="bento-tile gold-fade texture-host group/card relative flex min-h-[148px] flex-col overflow-hidden rounded-[20px] border border-white/[0.07] bg-card p-4 outline-none focus-visible:border-brand/60 sm:p-5"
+                  className="bento-tile group/card relative flex min-h-[140px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 outline-none focus-visible:border-brand/60 sm:p-5"
                 >
-                  {/* Doku her zaman; sarımtırak degrade yalnızca üzerine gelince belirir. */}
-                  <span aria-hidden className="tile-texture tile-texture-down" />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(165deg,rgba(217,182,37,0.1),rgba(217,182,37,0.025)_50%,transparent_75%)] opacity-0 transition-opacity duration-500 group-hover/card:opacity-100 group-focus-visible/card:opacity-100"
-                  />
+                  {/* Düz kutu: doku ve degrade yalnızca üstteki büyük kartta; burada tek vurgu alt çizgi. */}
                   <span
                     aria-hidden
                     className="absolute inset-x-5 bottom-0 h-[2px] origin-left scale-x-0 rounded-full bg-brand transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-x-100"
