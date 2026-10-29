@@ -48,7 +48,7 @@ jobs:
           cat out/manifest.json
           ls -la out
 
-      - name: "tester-latest" sürümünü yenile
+      - name: tester-latest sürümünü yenile
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
