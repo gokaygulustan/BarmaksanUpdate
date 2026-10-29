@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { procurementApi } from '@/lib/api';
 import { ArrowRight, BarChart3, Building2, Layers } from 'lucide-react';
-import { StatusGlyph } from '@/components/StatusGlyph';
+import { StatusGlyph, statusTone } from '@/components/StatusGlyph';
+import { Windmill } from '@/components/brand/Windmill';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -20,7 +21,6 @@ import {
   SecondaryButton,
   Segmented,
   SkeletonCards,
-  StatusChip,
   Swap,
   Tile,
 } from '@/components/page/Page';
@@ -249,20 +249,25 @@ export default function AnalysisReportsPage() {
                 <Link
                   key={req.id}
                   href={`/procurement/${req.id}/analysis`}
-                  className="bento-tile group/card relative flex min-h-[140px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 outline-none focus-visible:border-brand/60 sm:p-5"
+                  className="bento-tile gold-fade group/card relative flex min-h-[132px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 outline-none focus-visible:border-brand/60 sm:p-5"
                 >
-                  {/* Düz kutu: doku ve degrade yalnızca üstteki büyük kartta; burada tek vurgu alt çizgi. */}
+                  {/* Düz kutu, doku yok. Üzerine gelince panodaki gibi alttan sarı degrade yükselir; köşedeki
+                   * soluk değirmen çeyrek tur döner. */}
+                  <Windmill
+                    spinning={false}
+                    className="pointer-events-none absolute -bottom-16 -right-14 size-[150px] text-brand opacity-[0.06] transition-[opacity,rotate,transform] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:rotate-90 group-hover/card:opacity-[0.16]"
+                  />
                   <span
                     aria-hidden
                     className="absolute inset-x-5 bottom-0 h-[2px] origin-left scale-x-0 rounded-full bg-brand transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/card:scale-x-100"
                   />
 
-                  <div className="relative flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                    <StatusChip
-                      status={req.status}
-                      label={ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}
-                    />
-                    <span className="text-[12px] tabular-nums text-white/40">
+                  <div className="relative flex items-center justify-between gap-3 text-[12px]">
+                    <span className="flex min-w-0 items-center gap-2 font-medium" style={{ color: statusTone(req.status) }}>
+                      <span className="size-1.5 shrink-0 rounded-full bg-current" />
+                      <span className="truncate">{ready ? 'Analize hazır' : procurementStatusLabel(req.status) || 'Arşiv'}</span>
+                    </span>
+                    <span className="shrink-0 tabular-nums text-white/35">
                       {format(new Date(req.createdAt), 'd MMM yyyy', { locale: tr })}
                     </span>
                   </div>
@@ -275,10 +280,10 @@ export default function AnalysisReportsPage() {
                     <span className="text-[12.5px] tabular-nums text-white/45">
                       {itemCount} kalem · {vendors.length} tedarikçi
                     </span>
-                    <span className="flex items-center gap-1.5 text-[13px] font-medium text-white/55 transition-colors duration-300 group-hover/card:text-brand">
-                      {ready ? 'Analizi başlat' : 'Raporu aç'}
-                      <ArrowRight className="size-4 -rotate-45 transition-transform duration-300 group-hover/card:rotate-0 group-hover/card:translate-x-0.5" />
-                    </span>
+                    <ArrowRight
+                      aria-label={ready ? 'Analizi başlat' : 'Raporu aç'}
+                      className="size-4 shrink-0 -translate-x-1.5 text-brand opacity-0 transition-[opacity,transform] duration-300 group-hover/card:translate-x-0 group-hover/card:opacity-100"
+                    />
                   </div>
                 </Link>
               );
